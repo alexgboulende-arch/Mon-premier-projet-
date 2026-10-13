@@ -528,8 +528,8 @@ a.row { text-decoration: none; color: inherit; }
     { id: "bonus", name: "Bonus surprise", icon: "gift", tier: "free", sport: "foot", markets: ["o35", "2"], n: 1, wide: true },
     { id: "score", name: "Score exact", icon: "target", tier: "elite", sport: "foot", markets: ["cs"], n: 2 },
     { id: "htft", name: "Mi-temps / Fin", icon: "half", tier: "pro", sport: "foot", markets: ["htft"], n: 2 },
+    { id: "c5", name: "Combiné cote 5+", icon: "layers", tier: "elite", combo: { legs: 4, min: 5, markets: ["1", "1X", "X2", "o15", "o25", "by"] } },
     { id: "c10", name: "Combiné cote 10+", icon: "layers", tier: "pro", combo: { legs: 5, min: 10, markets: ["1", "2", "o25", "by", "u25"] } },
-    { id: "c50", name: "Combiné cote 50+", icon: "layers", tier: "elite", combo: { legs: 8, min: 50, markets: ["1", "2", "o25", "by", "u25", "1X"] } },
     { id: "simples", name: "Simples VIP", icon: "ticket", tier: "pro", sport: "foot", markets: ["1", "2", "o25", "by"], n: 3 },
     { id: "live", name: "Live", icon: "zap", tier: "elite", sport: "foot", markets: ["o15", "o25", "by"], n: 2, live: true }
   ];
@@ -547,7 +547,7 @@ a.row { text-decoration: none; color: inherit; }
     { id: "pro", name: "Pro", tag: "Recommandé", prices: { 1: [2900, "4,49"], 3: [7500, "11,49"], 6: [13900, "20,99"] },
       perks: ["Tout le gratuit, sans publicité", "Simples VIP, Mi-temps / Fin, Combiné cote 10+", "Alerte dès la publication à 00:00"] },
     { id: "elite", name: "Élite", prices: { 1: [6900, "10,49"], 3: [17900, "27,49"], 6: [32900, "49,99"] },
-      perks: ["Tout Pro", "Score exact, Combiné cote 50+, Live", "Alertes pendant les matchs en direct"] }
+      perks: ["Tout Pro", "Score exact, Combiné cote 5+, Live", "Alertes pendant les matchs en direct"] }
   ];
 
   /* ================= Génération déterministe ================= */
@@ -1120,7 +1120,7 @@ a.row { text-decoration: none; color: inherit; }
   });
   document.addEventListener("keydown", e => { if (e.key === "Escape" && !sheetWrap.hidden) closeSheet(); });
 
-  // Lien direct vers une rubrique : …#score, …#c50, etc.
+  // Lien direct vers une rubrique : …#score, …#c5, etc.
   const h = location.hash.slice(1);
   if (RUB[h]) state.view = h;
   render();

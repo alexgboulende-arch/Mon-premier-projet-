@@ -8,7 +8,10 @@ version améliorée. **Statut : maquette cliquable à valider.**
 - Vrai business, Android d'abord, en français, pour le monde francophone.
 - Pronostics produits par une **IA**, publiés à **00:00**, avec un indice de confiance.
 - Résultats mis à jour automatiquement, historique complet (gagnés et perdus).
-- Revenus : coupon VIP à l'unité, publicité dans la version gratuite, abonnements Pro et Élite.
+- Revenus : coupon VIP à l'unité (500 FCFA), publicité dans la version gratuite,
+  abonnements Pro (2 900 FCFA/mois) et Élite (6 900 FCFA/mois), aussi en 3 et 6 mois.
+- Rubriques VIP : Score exact, Mi-temps / Fin, Combiné cote 5+, Combiné cote 10+,
+  Simples VIP, Live. Le combiné cote 50+ de l'original est abandonné (trop rarement gagnant).
 - Pas de liens vers les bookmakers.
 - Étapes : maquette cliquable, puis vraie app en Flutter.
 
