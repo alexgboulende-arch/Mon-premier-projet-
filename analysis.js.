@@ -160,14 +160,14 @@
       rsi14 >= 50 &&
       rsi14 < 70
     ) {
-      signal = "BIENVENUE_A_L_ETUDE_ACHAT";
+      signal = signal = "BUY_SETUP"; 
     } else if (
       tendance === "BAISSIERE" &&
       rsi14 !== null &&
       rsi14 <= 50 &&
       rsi14 > 30
     ) {
-      signal = "BIENVENUE_A_L_ETUDE_VENTE";
+      signal = signal = "SELL_SETUP";
     }
 
     return {
