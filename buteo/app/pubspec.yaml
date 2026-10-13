@@ -1,0 +1,55 @@
+name: buteo
+description: "Buteo, pronostics sportifs."
+publish_to: 'none'
+
+# Version affichée (1.0.0) et numéro de build pour le Play Store (+1).
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_svg: ^2.3.0
+  shared_preferences: ^2.5.6
+  share_plus: ^13.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/logo/
+
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.otf
+        - asset: assets/fonts/Inter-Medium.otf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.otf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.otf
+          weight: 700
+        - asset: assets/fonts/Inter-ExtraBold.otf
+          weight: 800
+    - family: BarlowCondensed
+      fonts:
+        - asset: assets/fonts/BarlowCondensed-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/BarlowCondensed-Bold.ttf
+          weight: 700
+
+# Icône de l'app : `dart run flutter_launcher_icons`
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: assets/icon/buteo-icone.png
+  adaptive_icon_background: "#0A1230"
+  adaptive_icon_foreground: assets/icon/buteo-icone-avant-plan.png
