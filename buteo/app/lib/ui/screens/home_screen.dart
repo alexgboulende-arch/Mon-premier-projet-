@@ -25,7 +25,7 @@ class HomeScreen extends StatelessWidget {
     final toDrop = 24 * 60 - (now.hour * 60 + now.minute);
     final selection = rubricsById['selection']!;
     final top = [...repo.day(selection, today).tips]..sort((a, b) => b.confidence.compareTo(a.confidence));
-    final best = top.first;
+    final best = top.firstOrNull;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
@@ -58,27 +58,45 @@ class HomeScreen extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 18),
-        InkWell(
-          onTap: () => openRubric(context, selection),
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 4),
+        if (best == null)
+          Panel(
+            padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                Icon(Icons.auto_awesome_outlined, size: 15, color: c.winText),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: Text(
-                    "Prono phare · la confiance la plus haute de l'IA",
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: c.winText),
+                Icon(Icons.nightlight_round, color: c.winText),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: MutedText(
+                    'Les pronos du jour ne sont pas encore publiés. L’IA Buteo les met en ligne chaque nuit à 00:00 GMT.',
+                    size: 13,
                   ),
                 ),
               ],
             ),
+          )
+        else ...[
+          InkWell(
+            onTap: () => openRubric(context, selection),
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Icon(Icons.auto_awesome_outlined, size: 15, color: c.winText),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      "Prono phare · la confiance la plus haute de l'IA",
+                      style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: c.winText),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
-        const SizedBox(height: 6),
-        TipCard(tip: best, status: statusOf(best, today, now), rubricName: selection.name),
+          const SizedBox(height: 6),
+          TipCard(tip: best, status: statusOf(best, today, now), rubricName: selection.name),
+        ],
         if (state.showAds) ...[const SizedBox(height: 22), const AdSlot()],
         const SizedBox(height: 26),
         const _FavoritesSection(),

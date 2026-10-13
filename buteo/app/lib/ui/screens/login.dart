@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../services/auth_service.dart';
+import '../../services/firebase_config.dart';
 import '../../state/app_state.dart';
 import '../../theme/theme.dart';
 import '../widgets/common.dart';
@@ -72,13 +73,15 @@ class _LoginChoicesState extends State<_LoginChoices> {
           icon: Icons.account_circle_outlined,
           onPressed: _busy ? () {} : (available ? _google : () => showToast(context, notConfiguredMessage)),
         ),
-        const SizedBox(height: 10),
-        WideButton(
-          'Continuer avec mon numéro',
-          icon: Icons.phone_iphone_rounded,
-          tone: ButtonTone.ghost,
-          onPressed: available ? _phone : () => showToast(context, notConfiguredMessage),
-        ),
+        if (ButeoFirebase.phoneSignIn) ...[
+          const SizedBox(height: 10),
+          WideButton(
+            'Continuer avec mon numéro',
+            icon: Icons.phone_iphone_rounded,
+            tone: ButtonTone.ghost,
+            onPressed: available ? _phone : () => showToast(context, notConfiguredMessage),
+          ),
+        ],
         if (!available) ...[const SizedBox(height: 12), const Note(notConfiguredMessage, icon: Icons.info_outline)],
       ],
     );

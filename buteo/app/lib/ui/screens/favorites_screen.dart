@@ -86,7 +86,12 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
           if (groups.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 24),
-              child: MutedText('Aucune équipe ne correspond à « $_query ».', align: TextAlign.center),
+              child: MutedText(
+                _query.trim().isEmpty
+                    ? 'La liste des équipes arrive avec la première publication des pronos.'
+                    : 'Aucune équipe ne correspond à « $_query ».',
+                align: TextAlign.center,
+              ),
             ),
           for (final (g, teams) in groups) ...[
             Padding(

@@ -29,6 +29,7 @@ class Rubric {
     this.comboMin = 0,
     this.live = false,
     this.wide = false,
+    this.engine = true,
   });
 
   final String id;
@@ -50,6 +51,9 @@ class Rubric {
 
   /// Tuile sur toute la largeur de la grille d'accueil.
   final bool wide;
+
+  /// Rubrique produite par le moteur de pronostics (sinon : « bientôt » avec les vraies données).
+  final bool engine;
 
   bool get isCombo => comboLegs > 0;
   bool get isVip => tier != Tier.free;
@@ -117,6 +121,9 @@ class Tip implements Pick {
 
   Score score = const Score(0, 0);
 
+  /// État envoyé par le moteur (vraies données). Absent : calculé d'après l'heure (démonstration).
+  TipStatus? reported;
+
   int get kickoff => minutesOf(time);
 }
 
@@ -166,7 +173,15 @@ class TeamGroup {
   final List<String> teams;
 }
 
-enum StatusKind { soon, live, won, lost }
+enum StatusKind {
+  soon,
+  live,
+  won,
+  lost,
+
+  /// Match reporté ou annulé : le prono ne compte pas.
+  voided,
+}
 
 class TipStatus {
   const TipStatus(this.kind, {this.label, this.home, this.away});

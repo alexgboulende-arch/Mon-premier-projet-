@@ -101,7 +101,7 @@ class _DailyChart extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = context.colors;
     final dates = [for (var d = 14; d >= 1; d--) today.subtract(Duration(days: d))];
-    final rates = [for (final d in dates) dayRate(repo, d)];
+    final rates = [for (final d in dates) repo.dayRate(d)];
     const h = 130.0;
     return Panel(
       padding: const EdgeInsets.all(14),
@@ -152,12 +152,13 @@ class _DailyChart extends StatelessWidget {
                           for (var i = 0; i < rates.length; i++)
                             Expanded(
                               child: Semantics(
-                                label: '${shortDate(dates[i])} : ${percent(rates[i])}',
+                                label:
+                                    '${shortDate(dates[i])} : ${rates[i] == null ? 'pas de résultat' : percent(rates[i]!)}',
                                 child: Container(
                                   margin: const EdgeInsets.symmetric(horizontal: 2),
-                                  height: (rates[i] * h).clamp(3, h),
+                                  height: ((rates[i] ?? 0) * h).clamp(3, h),
                                   decoration: BoxDecoration(
-                                    color: rates[i] < .5 ? c.loss : c.win,
+                                    color: rates[i] == null ? c.line : (rates[i]! < .5 ? c.loss : c.win),
                                     borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
                                   ),
                                 ),

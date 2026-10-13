@@ -1,30 +1,64 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
+
 import 'catalog.dart';
 import 'models.dart';
 
 /// Source des pronostics. La version de démonstration génère des données
 /// fictives ; la vraie version lira les pronos publiés par l'IA (Firebase).
-abstract class TipsRepository {
+abstract class TipsRepository extends ChangeNotifier {
+  /// `true` pour les données fictives de démonstration.
+  bool get isDemo;
+
   /// Heure actuelle, en GMT.
   DateTime now();
 
+  /// Pronos d'une rubrique ; vide si rien n'est publié (ou pas encore chargé).
   RubricDay day(Rubric rubric, DateTime date);
+
+  /// Le serveur a refusé l'accès (rubrique VIP sans la formule correspondante).
+  bool isLocked(Rubric rubric, DateTime date) => false;
+
+  /// Résultats des [days] derniers jours, aujourd'hui exclu.
+  PickStats stats(Rubric rubric, int days);
+
+  /// Taux de réussite d'une journée passée, toutes rubriques ; `null` si aucun résultat.
+  double? dayRate(DateTime date);
 
   /// Championnats et équipes suivis par l'IA.
   List<TeamGroup> teamGroups();
+
+  /// La formule ou les coupons ont changé : recharger les rubriques VIP.
+  void refreshAccess() {}
 }
 
 /// Pronos fictifs mais stables : une même rubrique et une même date
 /// donnent toujours les mêmes matchs et les mêmes résultats.
-class DemoTipsRepository implements TipsRepository {
+class DemoTipsRepository extends TipsRepository {
   DemoTipsRepository({DateTime Function()? clock}) : _clock = clock ?? (() => DateTime.now().toUtc());
 
   final DateTime Function() _clock;
   final _cache = <String, RubricDay>{};
 
   @override
+  bool get isDemo => true;
+
+  @override
   DateTime now() => _clock();
+
+  @override
+  PickStats stats(Rubric rubric, int days) {
+    final today = dayOf(now());
+    var s = const PickStats();
+    for (var d = 1; d <= days; d++) {
+      s = s + PickStats.of(day(rubric, today.subtract(Duration(days: d))).picks);
+    }
+    return s;
+  }
+
+  @override
+  double? dayRate(DateTime date) => PickStats.of(rubrics.expand((r) => day(r, date).picks)).rate;
 
   @override
   List<TeamGroup> teamGroups() => [
@@ -169,6 +203,8 @@ const matchDuration = {Sport.foot: 112, Sport.basket: 150, Sport.tennis: 125};
 
 /// État d'un prono à l'heure [now] (GMT). [date] est le jour du match.
 TipStatus statusOf(Tip t, DateTime date, DateTime now) {
+  final reported = t.reported;
+  if (reported != null) return reported;
   final today = dayOf(now);
   final d = dayOf(date);
   if (d.isBefore(today)) return _final(t);
@@ -226,9 +262,13 @@ TipStatus _final(Tip t) => TipStatus(t.won ? StatusKind.won : StatusKind.lost, h
 /// État d'un combiné : perdu dès qu'un match est perdu, gagné quand tous sont gagnés.
 TipStatus comboStatus(Combo c, DateTime date, DateTime now) {
   final all = c.legs.map((l) => statusOf(l, date, now)).toList();
+  if (all.isEmpty) return const TipStatus(StatusKind.soon);
   if (all.any((s) => s.kind == StatusKind.lost)) return const TipStatus(StatusKind.lost);
-  if (all.every((s) => s.kind == StatusKind.won)) return const TipStatus(StatusKind.won);
-  if (all.any((s) => s.kind == StatusKind.live)) return const TipStatus(StatusKind.live, label: 'En cours');
+  // Un match annulé compte comme gagné à la cote 1.
+  if (all.every((s) => s.kind == StatusKind.won || s.kind == StatusKind.voided)) {
+    return TipStatus(all.every((s) => s.kind == StatusKind.voided) ? StatusKind.voided : StatusKind.won);
+  }
+  if (all.any((s) => s.kind != StatusKind.soon)) return const TipStatus(StatusKind.live, label: 'En cours');
   return const TipStatus(StatusKind.soon);
 }
 
@@ -261,20 +301,10 @@ class PickStats {
 }
 
 /// Statistiques des [days] derniers jours, aujourd'hui exclu.
-PickStats statsFor(TipsRepository repo, Rubric rubric, int days) {
-  final today = dayOf(repo.now());
-  var s = const PickStats();
-  for (var d = 1; d <= days; d++) {
-    s = s + PickStats.of(repo.day(rubric, today.subtract(Duration(days: d))).picks);
-  }
-  return s;
-}
+PickStats statsFor(TipsRepository repo, Rubric rubric, int days) => repo.stats(rubric, days);
 
 PickStats globalStats(TipsRepository repo, int days) =>
     rubrics.fold(const PickStats(), (s, r) => s + statsFor(repo, r, days));
-
-/// Taux de réussite de toutes les rubriques pour une journée passée.
-double dayRate(TipsRepository repo, DateTime date) => PickStats.of(rubrics.expand((r) => repo.day(r, date).picks)).rate;
 
 DateTime dayOf(DateTime t) => DateTime.utc(t.year, t.month, t.day);
 

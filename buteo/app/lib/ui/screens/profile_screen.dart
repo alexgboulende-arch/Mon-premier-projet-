@@ -67,27 +67,28 @@ class ProfileScreen extends StatelessWidget {
             ],
           ),
         ),
-        section(
-          'Mode démo',
-          Column(
-            children: [
-              Segmented<Tier>(
-                options: const [(Tier.free, 'Gratuit', null), (Tier.pro, 'Pro', null), (Tier.elite, 'Élite', null)],
-                value: state.tier,
-                onChanged: state.setTier,
-              ),
-              const SizedBox(height: 10),
-              WideButton(
-                'Remettre la démo à zéro',
-                tone: ButtonTone.ghost,
-                onPressed: () {
-                  state.resetDemo();
-                  showToast(context, 'Démo remise à zéro');
-                },
-              ),
-            ],
+        if (state.demoMode)
+          section(
+            'Mode démo',
+            Column(
+              children: [
+                Segmented<Tier>(
+                  options: const [(Tier.free, 'Gratuit', null), (Tier.pro, 'Pro', null), (Tier.elite, 'Élite', null)],
+                  value: state.tier,
+                  onChanged: state.setTier,
+                ),
+                const SizedBox(height: 10),
+                WideButton(
+                  'Remettre la démo à zéro',
+                  tone: ButtonTone.ghost,
+                  onPressed: () {
+                    state.resetDemo();
+                    showToast(context, 'Démo remise à zéro');
+                  },
+                ),
+              ],
+            ),
           ),
-        ),
         section(
           'Mes équipes',
           Panel(
@@ -216,7 +217,7 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 18),
-        Center(child: MutedText('Buteo 0.2 · version de démonstration', size: 11.5)),
+        Center(child: MutedText('Buteo 0.3', size: 11.5)),
       ],
     );
   }

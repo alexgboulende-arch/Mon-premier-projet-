@@ -135,6 +135,7 @@ class StatusPill extends StatelessWidget {
       StatusKind.lost => (c.lossSoft, c.lossText, Icon(Icons.close_rounded, size: 14, color: c.lossText), 'Perdu'),
       StatusKind.live => (c.liveSoft, c.liveText, _LiveDot(color: c.liveText), status.label ?? 'En cours'),
       StatusKind.soon => (c.surface2, c.muted, Icon(Icons.schedule_rounded, size: 14, color: c.muted), 'À venir'),
+      StatusKind.voided => (c.surface2, c.muted, Icon(Icons.block_rounded, size: 14, color: c.muted), 'Annulé'),
     };
     return Container(
       padding: EdgeInsets.symmetric(horizontal: small ? 7 : 10, vertical: small ? 2 : 4),
@@ -445,11 +446,13 @@ class ResponsibleNote extends StatelessWidget {
   );
 }
 
+/// Rappelle que les pronos sont fictifs (mode démonstration uniquement).
 class DemoBanner extends StatelessWidget {
   const DemoBanner({super.key});
 
   @override
   Widget build(BuildContext context) {
+    if (!AppScope.repo(context).isDemo) return const SizedBox.shrink();
     final c = context.colors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -475,6 +478,7 @@ void showToast(BuildContext context, String message) {
 }
 
 String pickCountLabel(RubricDay day, List<TipStatus> statuses) {
+  if (day.picks.isEmpty) return 'Aucun prono pour l’instant';
   if (day.isCombo) return '${plural(day.combo!.legs.length, 'match')} · cote ${odds(day.combo!.odds)}';
   final won = statuses.where((s) => s.kind == StatusKind.won).length;
   final live = statuses.where((s) => s.kind == StatusKind.live).length;

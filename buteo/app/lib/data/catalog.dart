@@ -44,6 +44,7 @@ const rubrics = <Rubric>[
     sport: Sport.basket,
     markets: ['bw', 'bh', 'bt'],
     count: 3,
+    engine: false,
   ),
   Rubric(
     id: 'tennis',
@@ -53,6 +54,7 @@ const rubrics = <Rubric>[
     sport: Sport.tennis,
     markets: ['tw', 't3', 'ts'],
     count: 3,
+    engine: false,
   ),
   Rubric(
     id: 'bonus',
@@ -113,6 +115,7 @@ const rubrics = <Rubric>[
     markets: ['o15', 'o25', 'by'],
     count: 2,
     live: true,
+    engine: false,
   ),
 ];
 

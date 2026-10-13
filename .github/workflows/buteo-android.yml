@@ -7,6 +7,7 @@ on:
     branches: [main, claude/mobile-app-design-odezzn]
     paths:
       - 'buteo/app/**'
+      - 'buteo/engine/exemple_picks.json'
       - '.github/workflows/buteo-android.yml'
   workflow_dispatch:
 

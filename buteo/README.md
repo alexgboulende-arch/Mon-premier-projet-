@@ -1,7 +1,7 @@
 # Buteo — Pronostics sportifs
 
 Application mobile de pronostics sportifs inspirée de *Multi Betting Tips*, en
-version améliorée. **Statut : application Flutter, étape 2 sur 5 (comptes, équipes favorites, alertes).**
+version améliorée. **Statut : étape 3 sur 5 (moteur de pronostics), en attente des clés pour tourner sur de vraies données.**
 
 ## Décisions prises
 
@@ -14,7 +14,7 @@ version améliorée. **Statut : application Flutter, étape 2 sur 5 (comptes, é
   Simples VIP, Live. Le combiné cote 50+ de l'original est abandonné (trop rarement gagnant).
 - Pas de liens vers les bookmakers.
 - Paiement : Google Play dans l'app ; Mobile Money et crypto aussi (voir « Paiements »).
-- Connexion par Google et par numéro de téléphone.
+- Connexion par Google pour l'instant (le SMS demande le forfait payant de Firebase).
 - En plus : équipes favorites, partage d'un prono sur WhatsApp, concours entre
   utilisateurs (sans gain d'argent), journal de paris. Pas d'essai gratuit ni de parrainage.
 
@@ -39,7 +39,8 @@ Organisation du code :
 | `lib/ui/screens/` | Accueil, rubrique, live, stats, offres, profil, démarrage |
 | `lib/ui/widgets/` | Carte de prono, tuiles, badges, fenêtres d'achat |
 | `test/` | Tests automatiques (générateur, états des matchs, compte, écrans) |
-| `../firebase/` | Règles de sécurité de la base Firestore |
+| `../firebase/` | Règles de sécurité de la base Firestore et leurs tests |
+| `../engine/` | Moteur de pronostics en Python (voir son README) |
 
 Commandes utiles (dans `app/`) : `flutter test`, `flutter analyze`,
 `flutter build apk --release`, `dart run flutter_launcher_icons` (icône).
@@ -51,8 +52,10 @@ Commandes utiles (dans `app/`) : `flutter test`, `flutter analyze`,
 2. **Comptes et notifications** (fait, à activer avec ta configuration Firebase) :
    connexion Google et téléphone, suppression du compte, équipes favorites
    synchronisées, alerte locale à 00:00 GMT, abonnement aux alertes serveur.
-3. **Moteur de l'IA** : source de données sportives, calcul des probabilités,
-   publication automatique à 00:00, résultats en direct.
+3. **Moteur de l'IA** (fait, à activer avec les clés) : modèle statistique,
+   choix des pronos de football, publication chaque nuit, résultats toutes les
+   10 minutes, statistiques, notification des résultats. L'app passe seule des
+   données de démonstration aux vrais pronos dès la première publication.
 4. **Paiements et publicité** : Google Play Billing, Mobile Money et crypto
    sur le site web, AdMob dans la version gratuite.
 5. **Communauté et publication** : concours, journal de paris, back-office,
@@ -93,6 +96,33 @@ du pays (de 0,01 à environ 0,46 $ par SMS). Pour l'activer : Mettre à niveau �
 Blaze, fixe une **alerte de budget** (par exemple 5 €), puis Authentication →
 Méthode de connexion → Téléphone → Activer. Pour tester sans payer, ajoute des
 « numéros de téléphone de test » avec un code fixe dans le même écran.
+
+## Activer les vrais pronos (étape 3)
+
+Le moteur tourne gratuitement sur GitHub Actions. Il lui faut deux clés,
+enregistrées comme **secrets** du dépôt (GitHub → Settings → Secrets and
+variables → Actions → New repository secret) :
+
+1. **`API_FOOTBALL_KEY`** : crée un compte sur
+   [dashboard.api-football.com](https://dashboard.api-football.com) et prends
+   l'offre **Pro** (environ 19 $ par mois). L'offre gratuite ne donne pas
+   accès à la saison en cours. Copie la clé affichée dans le tableau de bord.
+2. **`FIREBASE_SERVICE_ACCOUNT`** : console Firebase → Paramètres du projet →
+   Comptes de service → « Générer une nouvelle clé privée ». Colle tout le
+   contenu du fichier téléchargé. Cette clé est **secrète** : ne la partage
+   avec personne et ne la mets jamais dans le code.
+3. **Règles** : republie [`firebase/firestore.rules`](firebase/firestore.rules)
+   dans la console (Firestore Database → Règles), elles couvrent maintenant
+   les pronos.
+4. **Fusionner dans `main`** : GitHub ne lance les tâches programmées que
+   depuis la branche principale.
+
+Pour un premier essai sans attendre la nuit : Actions → « Buteo – moteur de
+pronostics » → Run workflow → tâche `publier`.
+
+**Avant de vendre le VIP**, laisse tourner le moteur deux ou trois semaines :
+les statistiques publiques montreront ses vrais résultats. Le modèle est testé
+sur des données simulées, pas encore sur la vraie saison.
 
 ## Paiements
 

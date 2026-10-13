@@ -21,9 +21,10 @@ class AppState extends ChangeNotifier {
     this.auth = const UnavailableAuthService(),
     this.store = const NoUserStore(),
     this.notifier = const SilentNotificationService(),
+    this.demoMode = true,
   }) {
     final saved = _prefs.getString(_kTier);
-    tier = Tier.values.firstWhere((t) => t.name == saved, orElse: () => Tier.free);
+    _demoTier = Tier.values.firstWhere((t) => t.name == saved, orElse: () => Tier.free);
     _unlocked = {...?_prefs.getStringList(_kUnlocked)};
     _favorites = {...?_prefs.getStringList(_kFavorites)};
     lightTheme = _prefs.getBool(_kLight) ?? false;
@@ -45,7 +46,18 @@ class AppState extends ChangeNotifier {
   final NotificationService notifier;
   StreamSubscription<Account?>? _accountSub;
 
-  Tier tier = Tier.free;
+  /// Données de démonstration : la formule et les coupons sont simulés sur le
+  /// téléphone. Avec les vraies données, ils viennent du serveur (profil Firestore).
+  final bool demoMode;
+
+  /// Appelé quand la formule ou les coupons changent (rechargement des rubriques VIP).
+  VoidCallback? onAccessChanged;
+
+  Tier _demoTier = Tier.free;
+  Tier serverTier = Tier.free;
+  Set<String> _serverCoupons = {};
+
+  Tier get tier => demoMode ? _demoTier : serverTier;
   Set<String> _unlocked = {};
   Set<String> _favorites = {};
   bool lightTheme = false;
@@ -78,9 +90,11 @@ class AppState extends ChangeNotifier {
   /// Coupons débloqués : « 2026-10-13|score ».
   static String _couponKey(String rubricId, DateTime day) => '${dateKey(day)}|$rubricId';
 
-  bool canSee(Rubric r, DateTime day) => tier.includes(r.tier) || _unlocked.contains(_couponKey(r.id, day));
+  Set<String> get _coupons => demoMode ? _unlocked : _serverCoupons;
 
-  int couponsOn(DateTime day) => _unlocked.where((k) => k.startsWith('${dateKey(day)}|')).length;
+  bool canSee(Rubric r, DateTime day) => tier.includes(r.tier) || _coupons.contains(_couponKey(r.id, day));
+
+  int couponsOn(DateTime day) => _coupons.where((k) => k.startsWith('${dateKey(day)}|')).length;
 
   void unlock(Rubric r, DateTime day) {
     _unlocked.add(_couponKey(r.id, day));
@@ -89,7 +103,7 @@ class AppState extends ChangeNotifier {
   }
 
   void setTier(Tier t) {
-    tier = t;
+    _demoTier = t;
     _prefs.setString(_kTier, t.name);
     notifyListeners();
   }
@@ -162,11 +176,17 @@ class AppState extends ChangeNotifier {
   Future<void> _onAccount(Account? a) async {
     final previous = account?.uid;
     account = a;
+    if (a == null) {
+      serverTier = Tier.free;
+      _serverCoupons = {};
+      if (previous != null) onAccessChanged?.call();
+    }
     notifyListeners();
     if (a == null || a.uid == previous) return;
     // Nouvelle connexion : on fusionne ce qui est sur le téléphone et ce qui est en ligne.
     try {
       final remote = await store.load(a.uid);
+      _readAccess(remote);
       if (remote != null) {
         _favorites.addAll(List<String>.from(remote['favorites'] as List? ?? const []));
         final alerts = remote['notifications'];
@@ -186,6 +206,15 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       debugPrint('Synchronisation du compte : $e');
     }
+  }
+
+  /// Formule et coupons écrits par le serveur dans le profil.
+  void _readAccess(Map<String, dynamic>? remote) {
+    final saved = remote?['tier'];
+    serverTier = Tier.values.firstWhere((t) => t.name == saved, orElse: () => Tier.free);
+    _serverCoupons = {...List<String>.from(remote?['coupons'] as List? ?? const [])};
+    onAccessChanged?.call();
+    notifyListeners();
   }
 
   Future<void> _pushToAccount({bool withToken = false}) async {

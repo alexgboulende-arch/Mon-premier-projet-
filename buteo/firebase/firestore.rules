@@ -23,6 +23,42 @@ service cloud.firestore {
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(serverFields());
     }
 
+    // Pronos publiés par le moteur. Gratuit : lisible par tous. VIP : réservé à la
+    // formule correspondante ou à un coupon du jour, puis public le lendemain
+    // (l'historique reste transparent). Un document absent peut être demandé.
+    match /picks/{id} {
+      allow read: if resource == null
+        || resource.data.tier == 'free'
+        || resource.data.publicAfter <= request.time
+        || (request.auth != null
+            && entitled(resource.data.tier, resource.data.date, resource.data.rubric));
+      allow write: if false;
+    }
+
+    // Statistiques et état du moteur : publics, écrits seulement par le moteur.
+    match /stats/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /config/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    function profilePath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    // Formule et coupons sont écrits par le serveur dans le profil (étape 4).
+    function entitled(tier, date, rubric) {
+      let profile = get(profilePath()).data;
+      return exists(profilePath()) && (
+        (tier == 'pro' && profile.get('tier', 'free') in ['pro', 'elite'])
+        || (tier == 'elite' && profile.get('tier', 'free') == 'elite')
+        || (date + '|' + rubric) in profile.get('coupons', [])
+      );
+    }
+
     // Tout le reste est fermé par défaut.
     match /{document=**} {
       allow read, write: if false;

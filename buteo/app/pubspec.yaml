@@ -3,7 +3,7 @@ description: "Buteo, pronostics sportifs."
 publish_to: 'none'
 
 # Version affichée (1.0.0) et numéro de build pour le Play Store (+1).
-version: 0.2.0+2
+version: 0.3.0+3
 
 environment:
   sdk: ^3.13.5
@@ -27,6 +27,7 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
+  fake_cloud_firestore: ^4.3.0
 
 flutter:
   uses-material-design: true

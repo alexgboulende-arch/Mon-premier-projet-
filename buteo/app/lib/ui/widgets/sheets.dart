@@ -88,6 +88,7 @@ Future<void> showUnlockSheet(BuildContext context, Rubric rubric) {
         'Payer ${fcfa(couponPrice.fcfa)}',
         tone: ButtonTone.gold,
         onPressed: () {
+          if (!AppScope.repo(context).isDemo) return _paymentSoon(context, sheet);
           state.unlock(rubric, today);
           Navigator.pop(sheet);
           showToast(context, "« ${rubric.name} » débloqué pour aujourd'hui");
@@ -114,6 +115,7 @@ Future<void> showPlanSheet(BuildContext context, Plan plan) {
         "S'abonner",
         tone: plan.tier == Tier.pro ? ButtonTone.gold : ButtonTone.green,
         onPressed: () {
+          if (!AppScope.repo(context).isDemo) return _paymentSoon(context, sheet);
           state.setTier(plan.tier);
           Navigator.pop(sheet);
           showToast(context, 'Bienvenue dans la formule ${plan.tier.label}');
@@ -199,4 +201,10 @@ class _NotifRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Avec les vraies données, l'achat simulé ne débloque rien : le paiement arrive à l'étape 4.
+void _paymentSoon(BuildContext context, BuildContext sheet) {
+  Navigator.pop(sheet);
+  showToast(context, 'Le paiement (Google Play, Mobile Money, crypto) arrive très bientôt.');
 }

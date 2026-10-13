@@ -26,6 +26,10 @@ abstract final class ButeoFirebase {
   /// créé par Firebase quand la connexion Google est activée.
   static const googleWebClientId = '';
 
+  /// Connexion par SMS : désactivée tant que le forfait Blaze n'est pas pris
+  /// (Firebase facture les SMS). Passer à `true` pour afficher le bouton.
+  static const phoneSignIn = false;
+
   static bool get isConfigured => apiKey.isNotEmpty && appId.isNotEmpty && projectId.isNotEmpty;
 
   /// Démarre Firebase. Renvoie `false` si la configuration manque ou échoue :

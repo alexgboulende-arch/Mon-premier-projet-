@@ -1,0 +1,104 @@
+name: Buteo – moteur de pronostics
+
+# Publie les pronos chaque nuit et suit les résultats pendant les matchs.
+# Les tâches programmées ne tournent que depuis la branche principale (main).
+# Sans les secrets API_FOOTBALL_KEY et FIREBASE_SERVICE_ACCOUNT, le moteur
+# s'arrête sans rien faire.
+on:
+  schedule:
+    - cron: '35 23 * * *'       # pronos du lendemain, prêts pour 00:00 GMT
+    - cron: '*/10 11-23 * * *'  # résultats pendant les matchs
+    - cron: '*/10 0-1 * * *'    # matchs terminés après minuit
+  workflow_dispatch:
+    inputs:
+      tache:
+        description: Tâche à lancer
+        type: choice
+        options: [resultats, publier]
+        default: resultats
+      date:
+        description: Journée à publier (AAAA-MM-JJ), vide pour la date automatique
+        required: false
+  push:
+    paths:
+      - 'buteo/engine/**'
+      - 'buteo/firebase/**'
+      - '.github/workflows/buteo-moteur.yml'
+
+concurrency:
+  group: buteo-moteur-${{ github.event_name == 'push' && github.ref || 'production' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: Tests du moteur
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: buteo/engine
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: buteo/engine/requirements*.txt
+      - run: pip install -r requirements-dev.txt
+      - name: Tests
+        run: python -m pytest -q
+      - name: Le fichier d'exemple lu par l'app est à jour
+        run: |
+          python -m engine essai --json exemple_picks.json > /dev/null
+          git diff --exit-code exemple_picks.json
+
+  regles:
+    name: Règles de sécurité Firestore
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: buteo/firebase
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+
+  moteur:
+    name: Pronos et résultats
+    if: github.event_name != 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: buteo/engine
+    env:
+      API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      TACHE: ${{ github.event.schedule == '35 23 * * *' && 'publier' || inputs.tache || 'resultats' }}
+      DATE_DEMANDEE: ${{ inputs.date }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          cache: pip
+          cache-dependency-path: buteo/engine/requirements.txt
+      - run: pip install -r requirements.txt
+      - name: Lancer la tâche
+        run: |
+          if [ "$TACHE" = "publier" ]; then
+            python -m engine publier ${DATE_DEMANDEE:+--date "$DATE_DEMANDEE"}
+          else
+            python -m engine resultats
+          fi

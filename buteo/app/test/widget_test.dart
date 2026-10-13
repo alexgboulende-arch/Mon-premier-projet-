@@ -1,7 +1,9 @@
 import 'package:buteo/app.dart';
 import 'package:buteo/data/catalog.dart';
+import 'package:buteo/data/firestore_repository.dart';
 import 'package:buteo/data/tips_repository.dart';
 import 'package:buteo/state/app_state.dart';
+import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -11,7 +13,7 @@ import 'fakes.dart';
 final _now = DateTime.utc(2026, 10, 13, 20, 10);
 
 /// Démarre l'app sur un écran de téléphone courant (360 × 780) à 20:10 GMT.
-Future<AppState> startApp(WidgetTester tester, {AppState? state}) async {
+Future<AppState> startApp(WidgetTester tester, {AppState? state, TipsRepository? repository}) async {
   tester.view.physicalSize = const Size(1080, 2340);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
@@ -22,7 +24,7 @@ Future<AppState> startApp(WidgetTester tester, {AppState? state}) async {
   await tester.pumpWidget(
     ButeoApp(
       state: state,
-      repository: DemoTipsRepository(clock: () => _now),
+      repository: repository ?? DemoTipsRepository(clock: () => _now),
       splashDuration: const Duration(milliseconds: 10),
     ),
   );
@@ -154,5 +156,34 @@ void main() {
     await settle(tester);
     expect(find.text('Continuer avec Google'), findsOneWidget);
     expect(find.textContaining('projet Firebase'), findsOneWidget);
+  });
+
+  testWidgets('vraies données : pronos pas encore publiés, rubriques à venir et VIP réservées', (tester) async {
+    final repo = FirestoreTipsRepository(db: FakeFirebaseFirestore(), clock: () => _now);
+    SharedPreferences.setMockInitialValues({});
+    final state = AppState(await SharedPreferences.getInstance(), demoMode: false);
+    await startApp(tester, state: state, repository: repo);
+
+    expect(find.textContaining('Version de démonstration'), findsNothing);
+    expect(find.textContaining('pas encore publiés'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Basket'), 300);
+    expect(find.text('Bientôt disponible'), findsWidgets);
+    await scrollAndTap(tester, find.text('Combiné cote 10+'));
+    expect(find.text('Rubrique Pro'), findsOneWidget);
+
+    // L'achat simulé ne débloque rien avec les vraies données.
+    await tester.tap(find.textContaining('Débloquer ce coupon'));
+    await settle(tester);
+    await tester.tap(find.textContaining('Payer'));
+    await settle(tester);
+    expect(find.text('Rubrique Pro'), findsOneWidget);
+    expect(find.textContaining('paiement'), findsOneWidget);
+
+    await tester.pageBack();
+    await settle(tester);
+    await tester.tap(find.text('Profil').last);
+    await settle(tester);
+    expect(find.text('Mode démo'.toUpperCase()), findsNothing);
+    repo.dispose();
   });
 }

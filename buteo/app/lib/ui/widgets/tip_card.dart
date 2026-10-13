@@ -221,9 +221,18 @@ class ComboCard extends StatelessWidget {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Text(odds(combo.odds), style: numStyle(38)),
-                    const SizedBox(width: 6),
-                    const Expanded(child: MutedText('cote totale', size: 12)),
+                    // Avec un grand texte (réglage d'accessibilité), « cote totale » passe à la ligne.
+                    Expanded(
+                      child: Wrap(
+                        spacing: 6,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          Text(odds(combo.odds), style: numStyle(38)),
+                          const MutedText('cote totale', size: 12),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     StatusPill(status),
                   ],
                 ),

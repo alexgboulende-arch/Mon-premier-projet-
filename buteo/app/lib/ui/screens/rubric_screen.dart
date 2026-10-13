@@ -60,39 +60,46 @@ class _RubricScreenState extends State<RubricScreen> {
   }
 
   List<Widget> _todayList(AppState state, TipsRepository repo, Rubric rubric, DateTime today, DateTime now) {
-    final day = repo.day(rubric, today);
+    if (!repo.isDemo && !rubric.engine) return const [_Soon()];
+    final locked = !state.canSee(rubric, today) || repo.isLocked(rubric, today);
+    // Rubrique verrouillée : aperçu flou de pronos fictifs (les vrais ne sont pas chargés).
+    final day = locked && !repo.isDemo ? _preview.day(rubric, today) : repo.day(rubric, today);
     final cards = <Widget>[
       if (day.isCombo)
         ComboCard(combo: day.combo!, date: today, now: now)
       else
         for (final t in day.tips)
-          TipCard(
-            tip: t,
-            status: statusOf(t, today, now),
-            rubricName: state.canSee(rubric, today) ? rubric.name : null,
-          ),
+          TipCard(tip: t, status: statusOf(t, today, now), rubricName: locked ? null : rubric.name),
     ];
     if (!rubric.isVip && state.showAds && cards.length > 2) cards.insert(2, const AdSlot());
 
-    if (state.canSee(rubric, today)) {
-      return [
-        const Note(
-          "Pronos générés par l'IA Buteo. L'indice de confiance est la probabilité estimée que le prono passe.",
-          icon: Icons.auto_awesome_outlined,
+    if (locked) return [_Locked(rubric: rubric, preview: cards)];
+    if (cards.isEmpty) {
+      return const [
+        _Empty(
+          'Pas encore de prono dans cette rubrique aujourd’hui. '
+          'Les pronos sont publiés chaque nuit à 00:00 GMT.',
         ),
-        ...cards,
       ];
     }
-    return [_Locked(rubric: rubric, preview: cards)];
+    return [
+      const Note(
+        "Pronos générés par l'IA Buteo. L'indice de confiance est la probabilité estimée que le prono passe.",
+        icon: Icons.auto_awesome_outlined,
+      ),
+      ...cards,
+    ];
   }
 
   List<Widget> _historyList(TipsRepository repo, Rubric rubric, DateTime today, DateTime now) {
+    if (!repo.isDemo && !rubric.engine) return const [_Soon()];
     final out = <Widget>[
       const Note("Tous les pronos sont affichés, gagnés comme perdus. L'historique VIP est public."),
     ];
     for (var d = 1; d <= 7; d++) {
       final date = today.subtract(Duration(days: d));
       final day = repo.day(rubric, date);
+      if (day.picks.isEmpty) continue;
       final won = day.picks.where((p) => p.won).length;
       out.add(
         Padding(
@@ -113,8 +120,34 @@ class _RubricScreenState extends State<RubricScreen> {
         out.addAll(day.tips.map((t) => TipCard(tip: t, status: statusOf(t, date, now))));
       }
     }
+    if (out.length == 1) out.add(const _Empty('L’historique se remplit jour après jour, dès les premiers résultats.'));
     return out;
   }
+}
+
+/// Pronos fictifs, uniquement pour l'aperçu flou des rubriques verrouillées.
+final _preview = DemoTipsRepository();
+
+class _Empty extends StatelessWidget {
+  const _Empty(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Panel(
+    padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+    child: MutedText(text, align: TextAlign.center, size: 13),
+  );
+}
+
+class _Soon extends StatelessWidget {
+  const _Soon();
+
+  @override
+  Widget build(BuildContext context) => const _Empty(
+    'Cette rubrique arrive bientôt : l’IA Buteo couvre pour l’instant le football. '
+    'Basket, tennis et pronos en direct suivront.',
+  );
 }
 
 class _StatsStrip extends StatelessWidget {

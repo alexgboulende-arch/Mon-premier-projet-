@@ -20,7 +20,14 @@ class RubricTile extends StatelessWidget {
     final now = repo.now();
     final today = dayOf(now);
     final day = repo.day(rubric, today);
-    final summary = pickCountLabel(day, day.tips.map((t) => statusOf(t, today, now)).toList());
+    final String summary;
+    if (!repo.isDemo && !rubric.engine) {
+      summary = 'Bientôt disponible';
+    } else if (!repo.isDemo && (!state.canSee(rubric, today) || repo.isLocked(rubric, today))) {
+      summary = 'Pronos du jour réservés';
+    } else {
+      summary = pickCountLabel(day, day.tips.map((t) => statusOf(t, today, now)).toList());
+    }
     final vip = rubric.isVip;
     return Material(
       color: c.surface,

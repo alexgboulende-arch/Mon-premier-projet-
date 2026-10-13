@@ -1,0 +1,782 @@
+{
+  "picks/2026-10-14_bonus": {
+    "date": "2026-10-14",
+    "rubric": "bonus",
+    "tier": "free",
+    "publicAfter": "2026-10-13T23:35:00Z",
+    "combo": false,
+    "status": "lost",
+    "tips": [
+      {
+        "fixtureId": 900003,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "France",
+        "home": "Lens",
+        "away": "Monaco",
+        "kickoff": "2026-10-14T15:00:00Z",
+        "market": "o35",
+        "label": "Plus de 3,5 buts",
+        "odds": 2.25,
+        "confidence": 48,
+        "status": "lost",
+        "score": {
+          "home": 1,
+          "away": 0
+        },
+        "halfTime": {
+          "home": 0,
+          "away": 0
+        }
+      }
+    ],
+    "publishedAt": "2026-10-13T23:35:00Z",
+    "updatedAt": "2026-10-14T23:59:00Z"
+  },
+  "picks/2026-10-14_btts": {
+    "date": "2026-10-14",
+    "rubric": "btts",
+    "tier": "free",
+    "publicAfter": "2026-10-13T23:35:00Z",
+    "combo": false,
+    "status": "won",
+    "tips": [
+      {
+        "fixtureId": 900008,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "Côte d'Ivoire",
+        "home": "Sporting Gagnoa",
+        "away": "Stade d'Abidjan",
+        "kickoff": "2026-10-14T18:00:00Z",
+        "market": "bn",
+        "label": "Les deux marquent : non",
+        "odds": 1.85,
+        "confidence": 52,
+        "status": "lost",
+        "score": {
+          "home": 2,
+          "away": 1
+        },
+        "halfTime": {
+          "home": 1,
+          "away": 1
+        }
+      },
+      {
+        "fixtureId": 900002,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "France",
+        "home": "Lyon",
+        "away": "Brest",
+        "kickoff": "2026-10-14T18:00:00Z",
+        "market": "bn",
+        "label": "Les deux marquent : non",
+        "odds": 1.56,
+        "confidence": 62,
+        "status": "won",
+        "score": {
+          "home": 0,
+          "away": 0
+        },
+        "halfTime": {
+          "home": 0,
+          "away": 0
+        }
+      },
+      {
+        "fixtureId": 900004,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "France",
+        "home": "Nice",
+        "away": "Rennes",
+        "kickoff": "2026-10-14T19:00:00Z",
+        "market": "by",
+        "label": "Les deux marquent : oui",
+        "odds": 1.89,
+        "confidence": 52,
+        "status": "won",
+        "score": {
+          "home": 4,
+          "away": 1
+        },
+        "halfTime": {
+          "home": 1,
+          "away": 1
+        }
+      }
+    ],
+    "publishedAt": "2026-10-13T23:35:00Z",
+    "updatedAt": "2026-10-14T23:59:00Z"
+  },
+  "picks/2026-10-14_c10": {
+    "date": "2026-10-14",
+    "rubric": "c10",
+    "tier": "pro",
+    "publicAfter": "2026-10-15T00:00:00Z",
+    "combo": true,
+    "status": "lost",
+    "tips": [
+      {
+        "fixtureId": 900003,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "France",
+        "home": "Lens",
+        "away": "Monaco",
+        "kickoff": "2026-10-14T15:00:00Z",
+        "market": "o25",
+        "label": "Plus de 2,5 buts",
+        "odds": 1.48,
+        "confidence": 69,
+        "status": "lost",
+        "score": {
+          "home": 1,
+          "away": 0
+        },
+        "halfTime": {
+          "home": 0,
+          "away": 0
+        }
+      },
+      {
+        "fixtureId": 900009,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "Côte d'Ivoire",
+        "home": "Mouna",
+        "away": "ASEC Mimosas",
+        "kickoff": "2026-10-14T15:00:00Z",
+        "market": "1",
+        "label": "Victoire Mouna",
+        "odds": 2.05,
+        "confidence": 50,
+        "status": "won",
+        "score": {
+          "home": 2,
+          "away": 1
+        },
+        "halfTime": {
+          "home": 0,
+          "away": 0
+        }
+      },
+      {
+        "fixtureId": 900001,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "France",
+        "home": "Lille",
+        "away": "Marseille",
+        "kickoff": "2026-10-14T16:30:00Z",
+        "market": "1",
+        "label": "Victoire Lille",
+        "odds": 1.83,
+        "confidence": 58,
+        "status": "won",
+        "score": {
+          "home": 2,
+          "away": 1
+        },
+        "halfTime": {
+          "home": 2,
+          "away": 1
+        }
+      },
+      {
+        "fixtureId": 900004,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "France",
+        "home": "Nice",
+        "away": "Rennes",
+        "kickoff": "2026-10-14T19:00:00Z",
+        "market": "o25",
+        "label": "Plus de 2,5 buts",
+        "odds": 1.8,
+        "confidence": 55,
+        "status": "won",
+        "score": {
+          "home": 4,
+          "away": 1
+        },
+        "halfTime": {
+          "home": 1,
+          "away": 1
+        }
+      },
+      {
+        "fixtureId": 900007,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "Côte d'Ivoire",
+        "home": "Africa Sports",
+        "away": "LYS Sassandra",
+        "kickoff": "2026-10-14T19:00:00Z",
+        "market": "1",
+        "label": "Victoire Africa Sports",
+        "odds": 1.83,
+        "confidence": 53,
+        "status": "won",
+        "score": {
+          "home": 2,
+          "away": 1
+        },
+        "halfTime": {
+          "home": 1,
+          "away": 1
+        }
+      }
+    ],
+    "publishedAt": "2026-10-13T23:35:00Z",
+    "updatedAt": "2026-10-14T23:59:00Z"
+  },
+  "picks/2026-10-14_c5": {
+    "date": "2026-10-14",
+    "rubric": "c5",
+    "tier": "elite",
+    "publicAfter": "2026-10-15T00:00:00Z",
+    "combo": true,
+    "status": "lost",
+    "tips": [
+      {
+        "fixtureId": 900009,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "Côte d'Ivoire",
+        "home": "Mouna",
+        "away": "ASEC Mimosas",
+        "kickoff": "2026-10-14T15:00:00Z",
+        "market": "1X",
+        "label": "Mouna ou nul",
+        "odds": 1.31,
+        "confidence": 75,
+        "status": "won",
+        "score": {
+          "home": 2,
+          "away": 1
+        },
+        "halfTime": {
+          "home": 0,
+          "away": 0
+        }
+      },
+      {
+        "fixtureId": 900003,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "France",
+        "home": "Lens",
+        "away": "Monaco",
+        "kickoff": "2026-10-14T15:00:00Z",
+        "market": "by",
+        "label": "Les deux marquent : oui",
+        "odds": 1.4,
+        "confidence": 70,
+        "status": "lost",
+        "score": {
+          "home": 1,
+          "away": 0
+        },
+        "halfTime": {
+          "home": 0,
+          "away": 0
+        }
+      },
+      {
+        "fixtureId": 900001,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "France",
+        "home": "Lille",
+        "away": "Marseille",
+        "kickoff": "2026-10-14T16:30:00Z",
+        "market": "1",
+        "label": "Victoire Lille",
+        "odds": 1.83,
+        "confidence": 58,
+        "status": "won",
+        "score": {
+          "home": 2,
+          "away": 1
+        },
+        "halfTime": {
+          "home": 2,
+          "away": 1
+        }
+      },
+      {
+        "fixtureId": 900002,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "France",
+        "home": "Lyon",
+        "away": "Brest",
+        "kickoff": "2026-10-14T18:00:00Z",
+        "market": "X2",
+        "label": "Brest ou nul",
+        "odds": 1.5,
+        "confidence": 65,
+        "status": "won",
+        "score": {
+          "home": 0,
+          "away": 0
+        },
+        "halfTime": {
+          "home": 0,
+          "away": 0
+        }
+      }
+    ],
+    "publishedAt": "2026-10-13T23:35:00Z",
+    "updatedAt": "2026-10-14T23:59:00Z"
+  },
+  "picks/2026-10-14_combine": {
+    "date": "2026-10-14",
+    "rubric": "combine",
+    "tier": "free",
+    "publicAfter": "2026-10-13T23:35:00Z",
+    "combo": true,
+    "status": "won",
+    "tips": [
+      {
+        "fixtureId": 900009,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "Côte d'Ivoire",
+        "home": "Mouna",
+        "away": "ASEC Mimosas",
+        "kickoff": "2026-10-14T15:00:00Z",
+        "market": "1X",
+        "label": "Mouna ou nul",
+        "odds": 1.31,
+        "confidence": 75,
+        "status": "won",
+        "score": {
+          "home": 2,
+          "away": 1
+        },
+        "halfTime": {
+          "home": 0,
+          "away": 0
+        }
+      },
+      {
+        "fixtureId": 900001,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "France",
+        "home": "Lille",
+        "away": "Marseille",
+        "kickoff": "2026-10-14T16:30:00Z",
+        "market": "1X",
+        "label": "Lille ou nul",
+        "odds": 1.24,
+        "confidence": 80,
+        "status": "won",
+        "score": {
+          "home": 2,
+          "away": 1
+        },
+        "halfTime": {
+          "home": 2,
+          "away": 1
+        }
+      },
+      {
+        "fixtureId": 900008,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "Côte d'Ivoire",
+        "home": "Sporting Gagnoa",
+        "away": "Stade d'Abidjan",
+        "kickoff": "2026-10-14T18:00:00Z",
+        "market": "u35",
+        "label": "Moins de 3,5 buts",
+        "odds": 1.25,
+        "confidence": 78,
+        "status": "won",
+        "score": {
+          "home": 2,
+          "away": 1
+        },
+        "halfTime": {
+          "home": 1,
+          "away": 1
+        }
+      }
+    ],
+    "publishedAt": "2026-10-13T23:35:00Z",
+    "updatedAt": "2026-10-14T23:59:00Z"
+  },
+  "picks/2026-10-14_htft": {
+    "date": "2026-10-14",
+    "rubric": "htft",
+    "tier": "pro",
+    "publicAfter": "2026-10-15T00:00:00Z",
+    "combo": false,
+    "status": "won",
+    "tips": [
+      {
+        "fixtureId": 900009,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "Côte d'Ivoire",
+        "home": "Mouna",
+        "away": "ASEC Mimosas",
+        "kickoff": "2026-10-14T15:00:00Z",
+        "market": "htft:1/1",
+        "label": "Mouna mène à la pause et gagne",
+        "odds": 3.06,
+        "confidence": 33,
+        "status": "lost",
+        "score": {
+          "home": 2,
+          "away": 1
+        },
+        "halfTime": {
+          "home": 0,
+          "away": 0
+        }
+      },
+      {
+        "fixtureId": 900001,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "France",
+        "home": "Lille",
+        "away": "Marseille",
+        "kickoff": "2026-10-14T16:30:00Z",
+        "market": "htft:1/1",
+        "label": "Lille mène à la pause et gagne",
+        "odds": 2.69,
+        "confidence": 39,
+        "status": "won",
+        "score": {
+          "home": 2,
+          "away": 1
+        },
+        "halfTime": {
+          "home": 2,
+          "away": 1
+        }
+      }
+    ],
+    "publishedAt": "2026-10-13T23:35:00Z",
+    "updatedAt": "2026-10-14T23:59:00Z"
+  },
+  "picks/2026-10-14_overunder": {
+    "date": "2026-10-14",
+    "rubric": "overunder",
+    "tier": "free",
+    "publicAfter": "2026-10-13T23:35:00Z",
+    "combo": false,
+    "status": "won",
+    "tips": [
+      {
+        "fixtureId": 900003,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "France",
+        "home": "Lens",
+        "away": "Monaco",
+        "kickoff": "2026-10-14T15:00:00Z",
+        "market": "o25",
+        "label": "Plus de 2,5 buts",
+        "odds": 1.48,
+        "confidence": 69,
+        "status": "lost",
+        "score": {
+          "home": 1,
+          "away": 0
+        },
+        "halfTime": {
+          "home": 0,
+          "away": 0
+        }
+      },
+      {
+        "fixtureId": 900009,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "Côte d'Ivoire",
+        "home": "Mouna",
+        "away": "ASEC Mimosas",
+        "kickoff": "2026-10-14T15:00:00Z",
+        "market": "u35",
+        "label": "Moins de 3,5 buts",
+        "odds": 1.47,
+        "confidence": 67,
+        "status": "won",
+        "score": {
+          "home": 2,
+          "away": 1
+        },
+        "halfTime": {
+          "home": 0,
+          "away": 0
+        }
+      },
+      {
+        "fixtureId": 900006,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "Côte d'Ivoire",
+        "home": "SOA",
+        "away": "San Pédro",
+        "kickoff": "2026-10-14T19:00:00Z",
+        "market": "u35",
+        "label": "Moins de 3,5 buts",
+        "odds": 1.74,
+        "confidence": 59,
+        "status": "won",
+        "score": {
+          "home": 1,
+          "away": 2
+        },
+        "halfTime": {
+          "home": 1,
+          "away": 1
+        }
+      },
+      {
+        "fixtureId": 900004,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "France",
+        "home": "Nice",
+        "away": "Rennes",
+        "kickoff": "2026-10-14T19:00:00Z",
+        "market": "o25",
+        "label": "Plus de 2,5 buts",
+        "odds": 1.8,
+        "confidence": 55,
+        "status": "won",
+        "score": {
+          "home": 4,
+          "away": 1
+        },
+        "halfTime": {
+          "home": 1,
+          "away": 1
+        }
+      }
+    ],
+    "publishedAt": "2026-10-13T23:35:00Z",
+    "updatedAt": "2026-10-14T23:59:00Z"
+  },
+  "picks/2026-10-14_score": {
+    "date": "2026-10-14",
+    "rubric": "score",
+    "tier": "elite",
+    "publicAfter": "2026-10-15T00:00:00Z",
+    "combo": false,
+    "status": "lost",
+    "tips": [
+      {
+        "fixtureId": 900009,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "Côte d'Ivoire",
+        "home": "Mouna",
+        "away": "ASEC Mimosas",
+        "kickoff": "2026-10-14T15:00:00Z",
+        "market": "cs:2-0",
+        "label": "Score exact 2-0",
+        "odds": 11.16,
+        "confidence": 9,
+        "status": "lost",
+        "score": {
+          "home": 2,
+          "away": 1
+        },
+        "halfTime": {
+          "home": 0,
+          "away": 0
+        }
+      },
+      {
+        "fixtureId": 900001,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "France",
+        "home": "Lille",
+        "away": "Marseille",
+        "kickoff": "2026-10-14T16:30:00Z",
+        "market": "cs:2-0",
+        "label": "Score exact 2-0",
+        "odds": 9.48,
+        "confidence": 11,
+        "status": "lost",
+        "score": {
+          "home": 2,
+          "away": 1
+        },
+        "halfTime": {
+          "home": 2,
+          "away": 1
+        }
+      }
+    ],
+    "publishedAt": "2026-10-13T23:35:00Z",
+    "updatedAt": "2026-10-14T23:59:00Z"
+  },
+  "picks/2026-10-14_selection": {
+    "date": "2026-10-14",
+    "rubric": "selection",
+    "tier": "free",
+    "publicAfter": "2026-10-13T23:35:00Z",
+    "combo": false,
+    "status": "won",
+    "tips": [
+      {
+        "fixtureId": 900009,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "Côte d'Ivoire",
+        "home": "Mouna",
+        "away": "ASEC Mimosas",
+        "kickoff": "2026-10-14T15:00:00Z",
+        "market": "1X",
+        "label": "Mouna ou nul",
+        "odds": 1.31,
+        "confidence": 75,
+        "status": "won",
+        "score": {
+          "home": 2,
+          "away": 1
+        },
+        "halfTime": {
+          "home": 0,
+          "away": 0
+        }
+      },
+      {
+        "fixtureId": 900002,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "France",
+        "home": "Lyon",
+        "away": "Brest",
+        "kickoff": "2026-10-14T18:00:00Z",
+        "market": "X2",
+        "label": "Brest ou nul",
+        "odds": 1.5,
+        "confidence": 65,
+        "status": "won",
+        "score": {
+          "home": 0,
+          "away": 0
+        },
+        "halfTime": {
+          "home": 0,
+          "away": 0
+        }
+      },
+      {
+        "fixtureId": 900006,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "Côte d'Ivoire",
+        "home": "SOA",
+        "away": "San Pédro",
+        "kickoff": "2026-10-14T19:00:00Z",
+        "market": "X2",
+        "label": "San Pédro ou nul",
+        "odds": 1.37,
+        "confidence": 72,
+        "status": "won",
+        "score": {
+          "home": 1,
+          "away": 2
+        },
+        "halfTime": {
+          "home": 1,
+          "away": 1
+        }
+      }
+    ],
+    "publishedAt": "2026-10-13T23:35:00Z",
+    "updatedAt": "2026-10-14T23:59:00Z"
+  },
+  "picks/2026-10-14_simples": {
+    "date": "2026-10-14",
+    "rubric": "simples",
+    "tier": "pro",
+    "publicAfter": "2026-10-15T00:00:00Z",
+    "combo": false,
+    "status": "won",
+    "tips": [
+      {
+        "fixtureId": 900009,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "Côte d'Ivoire",
+        "home": "Mouna",
+        "away": "ASEC Mimosas",
+        "kickoff": "2026-10-14T15:00:00Z",
+        "market": "1",
+        "label": "Victoire Mouna",
+        "odds": 2.05,
+        "confidence": 50,
+        "status": "won",
+        "score": {
+          "home": 2,
+          "away": 1
+        },
+        "halfTime": {
+          "home": 0,
+          "away": 0
+        }
+      },
+      {
+        "fixtureId": 900001,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "France",
+        "home": "Lille",
+        "away": "Marseille",
+        "kickoff": "2026-10-14T16:30:00Z",
+        "market": "1",
+        "label": "Victoire Lille",
+        "odds": 1.83,
+        "confidence": 58,
+        "status": "won",
+        "score": {
+          "home": 2,
+          "away": 1
+        },
+        "halfTime": {
+          "home": 2,
+          "away": 1
+        }
+      },
+      {
+        "fixtureId": 900006,
+        "sport": "foot",
+        "league": "Ligue 1",
+        "country": "Côte d'Ivoire",
+        "home": "SOA",
+        "away": "San Pédro",
+        "kickoff": "2026-10-14T19:00:00Z",
+        "market": "2",
+        "label": "Victoire San Pédro",
+        "odds": 2.09,
+        "confidence": 48,
+        "status": "won",
+        "score": {
+          "home": 1,
+          "away": 2
+        },
+        "halfTime": {
+          "home": 1,
+          "away": 1
+        }
+      }
+    ],
+    "publishedAt": "2026-10-13T23:35:00Z",
+    "updatedAt": "2026-10-14T23:59:00Z"
+  }
+}
