@@ -1,0 +1,128 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test du moteur - Alex Trading Lab</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 750px;
+      margin: 30px auto;
+      padding: 20px;
+      background: #101827;
+      color: #f1f5f9;
+    }
+    h1 { color: #60a5fa; }
+    .panel {
+      background: #1e293b;
+      padding: 18px;
+      border-radius: 10px;
+      margin: 16px 0;
+    }
+    button {
+      padding: 12px 18px;
+      background: #2563eb;
+      color: white;
+      border: 0;
+      border-radius: 7px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    pre {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+    .note { color: #cbd5e1; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>Alex Trading Lab</h1>
+  <p>Test du moteur d'analyse technique</p>
+
+  <div class="panel">
+    <h2>Test des indicateurs</h2>
+    <p>Les cours ci-dessous sont synthétiques et servent uniquement à tester le code.</p>
+    <button onclick="lancerTest()">Lancer les tests</button>
+    <pre id="resultat">En attente du test...</pre>
+  </div>
+
+  <div class="panel">
+    <h2>Indicateurs vérifiés</h2>
+    <p>EMA 200 : moyenne mobile exponentielle</p>
+    <p>RSI 14 : indicateur de momentum</p>
+    <p>ATR 14 : mesure de volatilité</p>
+    <p class="note">Aucun cours réel et aucun ordre de trading ne sont utilisés.</p>
+  </div>
+
+  <script src="analysis.js"></script>
+  <script>
+    function lancerTest() {
+      const sortie = document.getElementById("resultat");
+
+      try {
+        const moteur = window.AlexTradingLabAnalysis;
+
+        if (!moteur) {
+          sortie.textContent =
+            "ÉCHEC : le moteur analysis.js n'a pas été chargé.";
+          return;
+        }
+
+        const clotures = [];
+        const bougies = [];
+
+        for (let i = 0; i < 220; i++) {
+          const close = 100 + i * 0.1;
+          clotures.push(close);
+
+          bougies.push({
+            open: close - 0.05,
+            high: close + 0.2,
+            low: close - 0.2,
+            close: close
+          });
+        }
+
+        const resultatEMA = moteur.ema(clotures, 200);
+        const resultatRSI = moteur.rsi(clotures, 14);
+        const resultatATR = moteur.atr(bougies, 14);
+        const analyse = moteur.analyse(bougies);
+
+        const tests = [
+          ["EMA 200", resultatEMA],
+          ["RSI 14", resultatRSI],
+          ["ATR 14", resultatATR],
+          ["Analyse globale", analyse.ema200]
+        ];
+
+        const echecs = tests.filter(
+          ([nom, valeur]) =>
+            !Number.isFinite(valeur)
+        );
+
+        if (echecs.length > 0) {
+          sortie.textContent =
+            "ÉCHEC : certains calculs ne renvoient pas de nombre valide.\n" +
+            echecs.map(([nom]) => nom).join(", ");
+          return;
+        }
+
+        sortie.textContent =
+          "TESTS RÉUSSIS\n\n" +
+          "EMA 200 : " + resultatEMA.toFixed(4) + "\n" +
+          "RSI 14 : " + resultatRSI.toFixed(2) + "\n" +
+          "ATR 14 : " + resultatATR.toFixed(4) + "\n\n" +
+          "Statut : " + analyse.statut + "\n" +
+          "Tendance : " + analyse.tendance + "\n" +
+          "Configuration : " + analyse.signal + "\n\n" +
+          "Attention : données synthétiques, aucun signal exploitable en réel.";
+      } catch (erreur) {
+        sortie.textContent =
+          "ERREUR : " + erreur.message;
+      }
+    }
+  </script>
+</body>
+</html>
