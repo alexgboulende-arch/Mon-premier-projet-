@@ -1,7 +1,22 @@
 # Buteo — Pronostics sportifs
 
 Application mobile de pronostics sportifs inspirée de *Multi Betting Tips*, en
-version améliorée. **Statut : cadrage (questions en cours).**
+version améliorée. **Statut : maquette cliquable à valider.**
+
+## Décisions prises
+
+- Vrai business, Android d'abord, en français, pour le monde francophone.
+- Pronostics produits par une **IA**, publiés à **00:00**, avec un indice de confiance.
+- Résultats mis à jour automatiquement, historique complet (gagnés et perdus).
+- Revenus : coupon VIP à l'unité, publicité dans la version gratuite, abonnements Pro et Élite.
+- Pas de liens vers les bookmakers.
+- Étapes : maquette cliquable, puis vraie app en Flutter.
+
+## Maquette
+
+`maquette/index.html` : ouvre-la dans un navigateur (sur téléphone de préférence).
+Données fictives, heure simulée à 20:10 GMT. Lien direct vers une rubrique
+avec `#id`, par exemple `index.html#score`.
 
 ## Le nom
 
