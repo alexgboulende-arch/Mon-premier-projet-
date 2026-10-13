@@ -1,0 +1,93 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alex Trading Lab</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0b1220;color:#edf2f7;font-family:Arial,sans-serif}
+header{padding:22px 16px;background:#111c30;border-bottom:1px solid #29364b}
+h1{font-size:24px;margin:0 0 8px;color:#67e8b5}
+p{color:#aab8cc;line-height:1.5}
+main{padding:16px;max-width:900px;margin:auto}
+.card{background:#111c30;border:1px solid #29364b;border-radius:12px;padding:16px;margin-bottom:14px}
+label{display:block;margin:12px 0 6px;color:#b8c7da}
+select,button{width:100%;padding:12px;border-radius:8px;border:1px solid #42516a;background:#18263c;color:white;font-size:16px}
+button{background:#087f5b;border:0;font-weight:bold;margin-top:14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.value{font-size:18px;font-weight:bold;margin-top:8px}
+.small{font-size:12px;color:#93a4ba}
+.warning{border-left:4px solid #f4bd50}
+@media(max-width:420px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Alex Trading Lab</h1>
+  <div>Analyse technique et Price Action</div>
+  <p>Forex · Or · Indices · Crypto</p>
+</header>
+<main>
+  <section class="card">
+    <h2>Marché à analyser</h2>
+    <label for="market">Instrument</label>
+    <select id="market">
+      <option>EURUSD</option>
+      <option>GBPUSD</option>
+      <option>XAUUSD - Or</option>
+      <option>Volatility 75 Index</option>
+      <option>Boom 500 Index</option>
+      <option>Crash 500 Index</option>
+      <option>Bitcoin</option>
+    </select>
+    <label for="timeframe">Unité de temps</label>
+    <select id="timeframe">
+      <option>M5</option>
+      <option>M15</option>
+      <option>M30</option>
+      <option>H1</option>
+      <option>H4</option>
+      <option>D1</option>
+      <option>W1</option>
+    </select>
+    <button onclick="showStatus()">Préparer l'analyse</button>
+    <p id="status" aria-live="polite">En attente de sélection.</p>
+  </section>
+
+  <section class="grid">
+    <div class="card">
+      <div>Indicateurs</div>
+      <div class="value">EMA 200 · RSI · ATR</div>
+      <p class="small">À connecter aux données de marché</p>
+    </div>
+    <div class="card">
+      <div>Price Action</div>
+      <div class="value">Structure · Cassures</div>
+      <p class="small">À développer et à tester</p>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Gestion du risque</h2>
+    <p>Le calculateur de position et les paramètres de stop-loss et take-profit seront ajoutés dans une prochaine étape.</p>
+  </section>
+
+  <section class="card warning">
+    <strong>Mode démonstration</strong>
+    <p>Cette interface ne reçoit pas encore de prix réels et ne produit aucun signal de trading fiable. Aucun ordre n'est envoyé.</p>
+  </section>
+  <p class="small">Version 0.1 · Alex Trading Lab</p>
+</main>
+<script>
+function showStatus(){
+  const market=document.getElementById("market").value;
+  const timeframe=document.getElementById("timeframe").value;
+  document.getElementById("status").textContent=
+    "Sélection enregistrée : "+market+" en "+timeframe+
+    ". Les données réelles ne sont pas encore connectées.";
+}
+</script>
+</body>
+</html>
