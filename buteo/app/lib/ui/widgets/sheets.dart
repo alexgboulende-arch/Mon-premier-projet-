@@ -8,8 +8,9 @@ import '../../theme/theme.dart';
 import '../../util/format.dart';
 import 'common.dart';
 
-Future<void> _showSheet(BuildContext context, List<Widget> Function(BuildContext) children) {
-  return showModalBottomSheet<void>(
+/// Fenêtre du bas d'écran, défilante si le contenu est long.
+Future<T?> showButeoSheet<T>(BuildContext context, List<Widget> Function(BuildContext sheet) children) {
+  return showModalBottomSheet<T>(
     context: context,
     isScrollControlled: true,
     builder: (sheetContext) => SafeArea(
@@ -74,7 +75,7 @@ class _PayBox extends StatelessWidget {
 Future<void> showUnlockSheet(BuildContext context, Rubric rubric) {
   final state = AppScope.read(context);
   final today = dayOf(AppScope.repo(context).now());
-  return _showSheet(
+  return showButeoSheet(
     context,
     (sheet) => [
       _SheetTitle('Débloquer « ${rubric.name} »'),
@@ -103,7 +104,7 @@ Future<void> showPlanSheet(BuildContext context, Plan plan) {
   final state = AppScope.read(context);
   final months = state.planMonths;
   final price = plan.prices[months]!;
-  return _showSheet(
+  return showButeoSheet(
     context,
     (sheet) => [
       _SheetTitle('Passer ${plan.tier.label} · $months mois'),
@@ -140,7 +141,7 @@ Future<void> showNotificationsSheet(BuildContext context) {
       .map((t) => (t, statusOf(t, today, now)))
       .where((e) => e.$2.finished)
       .toList();
-  return _showSheet(
+  return showButeoSheet(
     context,
     (sheet) => [
       const _SheetTitle('Notifications'),

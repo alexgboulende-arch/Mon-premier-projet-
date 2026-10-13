@@ -4,11 +4,10 @@ import '../../data/catalog.dart';
 import '../../data/models.dart';
 import '../../data/tips_repository.dart';
 import '../../state/app_state.dart';
-import '../../theme/theme.dart';
 import '../../util/format.dart';
 import '../widgets/common.dart';
 import '../widgets/rubric_tile.dart';
-import '../widgets/tip_card.dart';
+import '../widgets/match_pick_card.dart';
 
 /// Matchs en cours parmi les pronos du jour, et accès aux pronos live.
 class LiveScreen extends StatelessWidget {
@@ -54,7 +53,7 @@ class LiveScreen extends StatelessWidget {
           )
         else
           for (final (t, s, r) in live) ...[
-            _LiveCard(tip: t, status: s, rubric: r, visible: state.canSee(r, today)),
+            MatchPickCard(tip: t, status: s, rubric: r, visible: state.canSee(r, today)),
             const SizedBox(height: 12),
           ],
         const SizedBox(height: 14),
@@ -72,58 +71,6 @@ class LiveScreen extends StatelessWidget {
           onPressed: () => openRubric(context, liveRubric),
         ),
       ],
-    );
-  }
-}
-
-class _LiveCard extends StatelessWidget {
-  const _LiveCard({required this.tip, required this.status, required this.rubric, required this.visible});
-
-  final Tip tip;
-  final TipStatus status;
-  final Rubric rubric;
-  final bool visible;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.colors;
-    return Panel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          MatchHeader(fixture: tip.fixture, trailing: StatusPill(status)),
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Teams(fixture: tip.fixture, status: status),
-          ),
-          InkWell(
-            onTap: () => openRubric(context, rubric),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: c.line)),
-              ),
-              child: Row(
-                children: [
-                  Icon(rubric.icon, size: 15, color: c.muted),
-                  const SizedBox(width: 8),
-                  MutedText('${rubric.name} :'),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: visible
-                        ? Text(
-                            '${tip.label} · cote ${odds(tip.odds)}',
-                            style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
-                          )
-                        : Align(alignment: Alignment.centerLeft, child: TierBadge(rubric.tier, locked: true)),
-                  ),
-                  Icon(Icons.chevron_right_rounded, size: 18, color: c.faint),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

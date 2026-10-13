@@ -10,6 +10,9 @@ abstract class TipsRepository {
   DateTime now();
 
   RubricDay day(Rubric rubric, DateTime date);
+
+  /// Championnats et équipes suivis par l'IA.
+  List<TeamGroup> teamGroups();
 }
 
 /// Pronos fictifs mais stables : une même rubrique et une même date
@@ -22,6 +25,12 @@ class DemoTipsRepository implements TipsRepository {
 
   @override
   DateTime now() => _clock();
+
+  @override
+  List<TeamGroup> teamGroups() => [
+    for (final (sport, leagues) in [(Sport.foot, _foot), (Sport.basket, _basket), (Sport.tennis, _tennis)])
+      for (final l in leagues) TeamGroup(sport: sport, league: l.name, country: l.country, teams: l.teams),
+  ];
 
   @override
   RubricDay day(Rubric rubric, DateTime date) {

@@ -31,6 +31,10 @@ class _ShellState extends State<Shell> {
     super.initState();
     // Met à jour les scores et les états chaque minute.
     _tick = Timer.periodic(const Duration(minutes: 1), (_) => AppScope.read(context).tick());
+    // Premier lancement : demande l'autorisation d'envoyer les alertes de 00:00.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) AppScope.read(context).askNotificationPermissionOnce();
+    });
   }
 
   @override

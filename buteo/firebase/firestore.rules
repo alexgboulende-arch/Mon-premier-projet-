@@ -1,0 +1,31 @@
+rules_version = '2';
+
+// Règles de sécurité de la base Firestore de Buteo.
+// À copier dans la console Firebase : Firestore Database > Règles > Publier.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Champs écrits uniquement par le serveur (formule, achats) : l'app ne peut pas les modifier.
+    function serverFields() {
+      return ['tier', 'entitlements', 'coupons', 'purchases'];
+    }
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // Profil de chaque utilisateur : équipes suivies, alertes, jeton de notification.
+    match /users/{uid} {
+      allow read, delete: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && !request.resource.data.keys().hasAny(serverFields());
+      allow update: if isOwner(uid)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(serverFields());
+    }
+
+    // Tout le reste est fermé par défaut.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

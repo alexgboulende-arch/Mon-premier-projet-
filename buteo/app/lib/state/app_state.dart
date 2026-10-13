@@ -1,34 +1,56 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/models.dart';
 import '../data/tips_repository.dart';
+import '../services/auth_service.dart';
+import '../services/notification_service.dart';
+import '../services/user_store.dart';
 
-/// Réglages et accès de l'utilisateur, gardés sur le téléphone.
+/// Réglages, favoris et accès de l'utilisateur.
 ///
-/// Dans cette version, la formule et les coupons sont simulés : il n'y a
-/// pas encore de compte ni de paiement réel.
+/// Tout est gardé sur le téléphone. Quand l'utilisateur est connecté, ses
+/// favoris et ses alertes sont aussi enregistrés avec son compte, pour les
+/// retrouver sur un autre téléphone. La formule et les coupons restent
+/// simulés jusqu'à l'étape des paiements.
 class AppState extends ChangeNotifier {
-  AppState(this._prefs) {
+  AppState(
+    this._prefs, {
+    this.auth = const UnavailableAuthService(),
+    this.store = const NoUserStore(),
+    this.notifier = const SilentNotificationService(),
+  }) {
     final saved = _prefs.getString(_kTier);
     tier = Tier.values.firstWhere((t) => t.name == saved, orElse: () => Tier.free);
     _unlocked = {...?_prefs.getStringList(_kUnlocked)};
+    _favorites = {...?_prefs.getStringList(_kFavorites)};
     lightTheme = _prefs.getBool(_kLight) ?? false;
     for (final k in notifications.keys.toList()) {
       notifications[k] = _prefs.getBool('notif_$k') ?? notifications[k]!;
     }
+    account = auth.current;
   }
 
   static const _kTier = 'tier';
   static const _kUnlocked = 'unlocked';
+  static const _kFavorites = 'favorites';
   static const _kLight = 'lightTheme';
+  static const _kAskedNotif = 'askedNotificationPermission';
 
   final SharedPreferences _prefs;
+  final AuthService auth;
+  final UserStore store;
+  final NotificationService notifier;
+  StreamSubscription<Account?>? _accountSub;
 
   Tier tier = Tier.free;
   Set<String> _unlocked = {};
+  Set<String> _favorites = {};
   bool lightTheme = false;
-  final notifications = <String, bool>{'drop': true, 'results': true, 'live': false};
+  Account? account;
+  final notifications = <String, bool>{Alerts.drop: true, Alerts.results: true, Alerts.live: false};
 
   /// Onglet affiché (0 Accueil, 1 Live, 2 Stats, 3 Offres, 4 Profil).
   int tab = 0;
@@ -36,6 +58,22 @@ class AppState extends ChangeNotifier {
   int planMonths = 1;
 
   bool get showAds => tier == Tier.free;
+  bool get signedIn => account != null;
+
+  /// À appeler une fois au démarrage : programme les alertes et suit le compte.
+  Future<void> start() async {
+    _accountSub = auth.changes.listen(_onAccount);
+    await notifier.apply(notifications);
+  }
+
+  @override
+  void dispose() {
+    _accountSub?.cancel();
+    super.dispose();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Formule et coupons (simulés)
 
   /// Coupons débloqués : « 2026-10-13|score ».
   static String _couponKey(String rubricId, DateTime day) => '${dateKey(day)}|$rubricId';
@@ -62,6 +100,112 @@ class AppState extends ChangeNotifier {
     setTier(Tier.free);
   }
 
+  // ---------------------------------------------------------------------------
+  // Équipes favorites
+
+  static String favoriteKey(Sport sport, String team) => '${sport.name}:$team';
+
+  bool isFavorite(Sport sport, String team) => _favorites.contains(favoriteKey(sport, team));
+
+  int get favoriteCount => _favorites.length;
+
+  /// Le match concerne-t-il une équipe suivie ?
+  bool followsFixture(Fixture f) => isFavorite(f.sport, f.home) || isFavorite(f.sport, f.away);
+
+  void toggleFavorite(Sport sport, String team) {
+    final key = favoriteKey(sport, team);
+    if (!_favorites.remove(key)) _favorites.add(key);
+    _prefs.setStringList(_kFavorites, _favorites.toList());
+    notifyListeners();
+    _pushToAccount();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Alertes
+
+  void toggleNotification(String key) {
+    notifications[key] = !notifications[key]!;
+    _prefs.setBool('notif_$key', notifications[key]!);
+    notifyListeners();
+    notifier.apply(notifications);
+    _pushToAccount();
+  }
+
+  /// Demande l'autorisation des notifications une seule fois, au premier lancement.
+  Future<void> askNotificationPermissionOnce() async {
+    if (_prefs.getBool(_kAskedNotif) ?? false) return;
+    await _prefs.setBool(_kAskedNotif, true);
+    await notifier.requestPermission();
+    await notifier.apply(notifications);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Compte
+
+  Future<void> signInWithGoogle() => auth.signInWithGoogle();
+
+  Future<SmsStep> sendSmsCode(String phone, {int? resendToken}) => auth.sendSmsCode(phone, resendToken: resendToken);
+
+  Future<void> confirmSmsCode(String verificationId, String code) => auth.confirmSmsCode(verificationId, code);
+
+  Future<void> signOut() => auth.signOut();
+
+  /// Efface les données en ligne puis le compte. Les réglages restent sur le téléphone.
+  Future<void> deleteAccount() async {
+    final uid = account?.uid;
+    if (uid == null) return;
+    await store.delete(uid);
+    await auth.deleteAccount();
+    await auth.signOut();
+  }
+
+  Future<void> _onAccount(Account? a) async {
+    final previous = account?.uid;
+    account = a;
+    notifyListeners();
+    if (a == null || a.uid == previous) return;
+    // Nouvelle connexion : on fusionne ce qui est sur le téléphone et ce qui est en ligne.
+    try {
+      final remote = await store.load(a.uid);
+      if (remote != null) {
+        _favorites.addAll(List<String>.from(remote['favorites'] as List? ?? const []));
+        final alerts = remote['notifications'];
+        if (alerts is Map) {
+          for (final k in notifications.keys.toList()) {
+            if (alerts[k] is bool) notifications[k] = alerts[k] as bool;
+          }
+        }
+        await _prefs.setStringList(_kFavorites, _favorites.toList());
+        for (final e in notifications.entries) {
+          await _prefs.setBool('notif_${e.key}', e.value);
+        }
+        notifyListeners();
+        await notifier.apply(notifications);
+      }
+      await _pushToAccount(withToken: true);
+    } catch (e) {
+      debugPrint('Synchronisation du compte : $e');
+    }
+  }
+
+  Future<void> _pushToAccount({bool withToken = false}) async {
+    final uid = account?.uid;
+    if (uid == null) return;
+    try {
+      final token = withToken ? await notifier.pushToken() : null;
+      await store.save(uid, {
+        'favorites': _favorites.toList()..sort(),
+        'notifications': notifications,
+        'pushToken': ?token,
+      });
+    } catch (e) {
+      debugPrint('Enregistrement du compte : $e');
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Navigation et affichage
+
   /// Rafraîchit les écrans (scores en direct, compte à rebours).
   void tick() => notifyListeners();
 
@@ -77,12 +221,6 @@ class AppState extends ChangeNotifier {
 
   void setPlanMonths(int m) {
     planMonths = m;
-    notifyListeners();
-  }
-
-  void toggleNotification(String key) {
-    notifications[key] = !notifications[key]!;
-    _prefs.setBool('notif_$key', notifications[key]!);
     notifyListeners();
   }
 

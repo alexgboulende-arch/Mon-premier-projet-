@@ -156,6 +156,16 @@ class RubricDay {
   List<Tip> get allTips => combo?.legs ?? tips;
 }
 
+/// Équipes (ou joueurs) d'un championnat, pour choisir ses favoris.
+class TeamGroup {
+  const TeamGroup({required this.sport, required this.league, required this.country, required this.teams});
+
+  final Sport sport;
+  final String league;
+  final String country;
+  final List<String> teams;
+}
+
 enum StatusKind { soon, live, won, lost }
 
 class TipStatus {

@@ -1,21 +1,28 @@
 import 'package:buteo/app.dart';
+import 'package:buteo/data/catalog.dart';
 import 'package:buteo/data/tips_repository.dart';
 import 'package:buteo/state/app_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'fakes.dart';
+
+final _now = DateTime.utc(2026, 10, 13, 20, 10);
+
 /// Démarre l'app sur un écran de téléphone courant (360 × 780) à 20:10 GMT.
-Future<AppState> startApp(WidgetTester tester) async {
+Future<AppState> startApp(WidgetTester tester, {AppState? state}) async {
   tester.view.physicalSize = const Size(1080, 2340);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
-  SharedPreferences.setMockInitialValues({});
-  final state = AppState(await SharedPreferences.getInstance());
+  if (state == null) {
+    SharedPreferences.setMockInitialValues({});
+    state = AppState(await SharedPreferences.getInstance());
+  }
   await tester.pumpWidget(
     ButeoApp(
       state: state,
-      repository: DemoTipsRepository(clock: () => DateTime.utc(2026, 10, 13, 20, 10)),
+      repository: DemoTipsRepository(clock: () => _now),
       splashDuration: const Duration(milliseconds: 10),
     ),
   );
@@ -88,5 +95,64 @@ void main() {
     await settle(tester);
     await scrollAndTap(tester, find.text('Clair'));
     expect(state.lightTheme, isTrue);
+  });
+
+  testWidgets('suivre une équipe affiche ses matchs du jour sur l’accueil', (tester) async {
+    final state = await startApp(tester);
+    final team = DemoTipsRepository(clock: () => _now)
+        .day(rubricsById['selection']!, dayOf(_now))
+        .tips
+        .first
+        .fixture
+        .home;
+
+    await scrollAndTap(tester, find.text('Choisir'));
+    expect(find.text('Mes équipes'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), team);
+    await settle(tester);
+    await tester.tap(find.widgetWithText(ListTile, team).first);
+    await settle(tester);
+    expect(state.favoriteCount, 1);
+
+    await tester.pageBack();
+    await settle(tester);
+    await tester.scrollUntilVisible(find.text('Modifier'), 200);
+    expect(find.text('Mes équipes'), findsOneWidget);
+    expect(find.text('Suis tes équipes'), findsNothing);
+  });
+
+  testWidgets('connecté, le profil montre le compte et permet de le supprimer', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final auth = FakeAuthService();
+    final store = FakeUserStore();
+    final state = AppState(await SharedPreferences.getInstance(), auth: auth, store: store);
+    await state.start();
+    await startApp(tester, state: state);
+    await state.signInWithGoogle();
+    await settle(tester);
+
+    await tester.tap(find.text('Profil').last);
+    await settle(tester);
+    expect(find.text('Awa Koné'), findsOneWidget);
+    expect(find.text('Se connecter'), findsNothing);
+
+    await scrollAndTap(tester, find.text('Supprimer mon compte'));
+    await tester.tap(find.text('Supprimer définitivement'));
+    await settle(tester);
+    expect(auth.deleted, isTrue);
+    expect(state.signedIn, isFalse);
+    expect(find.text('Supprimer mon compte'), findsNothing);
+    await tester.scrollUntilVisible(find.text('Invité'), -300);
+    expect(find.text('Invité'), findsOneWidget);
+  });
+
+  testWidgets('sans Firebase, la fenêtre de connexion explique pourquoi', (tester) async {
+    await startApp(tester);
+    await tester.tap(find.text('Profil').last);
+    await settle(tester);
+    await tester.tap(find.text('Se connecter'));
+    await settle(tester);
+    expect(find.text('Continuer avec Google'), findsOneWidget);
+    expect(find.textContaining('projet Firebase'), findsOneWidget);
   });
 }

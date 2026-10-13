@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../data/models.dart';
+import '../../services/auth_service.dart';
+import '../../services/notification_service.dart';
 import '../../data/tips_repository.dart';
 import '../../state/app_state.dart';
 import '../../theme/theme.dart';
 import '../widgets/common.dart';
+import '../widgets/sheets.dart';
+import 'favorites_screen.dart';
+import 'login.dart';
 import 'splash_screen.dart';
 
 const supportEmail = 'support@buteo.app';
@@ -44,16 +49,21 @@ class ProfileScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Invité', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                    Text(
+                      state.account?.label ?? 'Invité',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    ),
+                    if (state.account?.contact != null) MutedText(state.account!.contact!),
                     MutedText('Formule ${state.tier.label} · $coupons coupon${coupons > 1 ? 's' : ''} aujourd\'hui'),
                   ],
                 ),
               ),
-              FilledButton(
-                onPressed: () => _showLogin(context),
-                style: FilledButton.styleFrom(backgroundColor: c.win, foregroundColor: c.winInk),
-                child: const Text('Se connecter'),
-              ),
+              if (!state.signedIn)
+                FilledButton(
+                  onPressed: () => showLoginSheet(context),
+                  style: FilledButton.styleFrom(backgroundColor: c.win, foregroundColor: c.winInk),
+                  child: const Text('Se connecter'),
+                ),
             ],
           ),
         ),
@@ -79,13 +89,26 @@ class ProfileScreen extends StatelessWidget {
           ),
         ),
         section(
+          'Mes équipes',
+          Panel(
+            child: _Row(
+              icon: Icons.star_outline_rounded,
+              title: 'Équipes suivies',
+              subtitle: state.favoriteCount == 0
+                  ? 'Aucune pour l’instant'
+                  : '${state.favoriteCount} équipe${state.favoriteCount > 1 ? 's' : ''}',
+              onTap: () => openFavorites(context),
+            ),
+          ),
+        ),
+        section(
           'Notifications',
           Panel(
             child: Column(
               children: [
-                _SwitchRow('drop', 'Nouveaux pronos', 'Chaque nuit à 00:00'),
-                _SwitchRow('results', 'Résultats', 'Quand un prono est gagné ou perdu'),
-                _SwitchRow('live', 'Pronos live', 'Formule Élite'),
+                _SwitchRow(Alerts.drop, 'Nouveaux pronos', 'Chaque nuit à 00:00'),
+                _SwitchRow(Alerts.results, 'Résultats', 'Quand un prono est gagné ou perdu'),
+                _SwitchRow(Alerts.live, 'Pronos live', 'Formule Élite'),
               ],
             ),
           ),
@@ -167,44 +190,68 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
         ),
+        if (state.signedIn)
+          section(
+            'Compte',
+            Panel(
+              child: Column(
+                children: [
+                  _Row(
+                    icon: Icons.logout_rounded,
+                    title: 'Se déconnecter',
+                    onTap: () async {
+                      await state.signOut();
+                      if (context.mounted) showToast(context, 'Tu es déconnecté');
+                    },
+                  ),
+                  _Row(
+                    icon: Icons.delete_outline_rounded,
+                    title: 'Supprimer mon compte',
+                    subtitle: 'Efface ton compte et les données enregistrées en ligne',
+                    danger: true,
+                    onTap: () => _confirmDelete(context),
+                  ),
+                ],
+              ),
+            ),
+          ),
         const SizedBox(height: 18),
-        Center(child: MutedText('Buteo 0.1 · version de démonstration', size: 11.5)),
+        Center(child: MutedText('Buteo 0.2 · version de démonstration', size: 11.5)),
       ],
     );
   }
 
-  void _showLogin(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (sheet) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text('Se connecter', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 6),
-              const MutedText("Ton compte garde tes abonnements et tes coupons, même si tu changes de téléphone."),
-              const SizedBox(height: 14),
-              WideButton('Continuer avec Google', icon: Icons.account_circle_outlined, onPressed: () => _soon(sheet)),
-              const SizedBox(height: 10),
-              WideButton(
-                'Continuer avec mon numéro',
-                icon: Icons.phone_iphone_rounded,
-                tone: ButtonTone.ghost,
-                onPressed: () => _soon(sheet),
-              ),
-            ],
-          ),
+  Future<void> _confirmDelete(BuildContext context) async {
+    final c = context.colors;
+    final state = AppScope.read(context);
+    final ok = await showButeoSheet<bool>(
+      context,
+      (sheet) => [
+        const Text('Supprimer ton compte ?', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
+        const MutedText(
+          'Ton compte et tes données en ligne (équipes suivies, alertes) seront effacés. '
+          'Cette action est définitive. Un abonnement en cours se résilie dans Google Play.',
+          size: 13.5,
         ),
-      ),
+        FilledButton(
+          onPressed: () => Navigator.pop(sheet, true),
+          style: FilledButton.styleFrom(
+            backgroundColor: c.loss,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+          child: const Text('Supprimer définitivement'),
+        ),
+        WideButton('Annuler', tone: ButtonTone.ghost, onPressed: () => Navigator.pop(sheet, false)),
+      ],
     );
-  }
-
-  void _soon(BuildContext sheet) {
-    Navigator.pop(sheet);
-    showToast(sheet, 'La connexion arrive avec la prochaine étape (Firebase)');
+    if (ok != true) return;
+    try {
+      await state.deleteAccount();
+      if (context.mounted) showToast(context, 'Ton compte a été supprimé');
+    } on AuthFailure catch (e) {
+      if (context.mounted) showToast(context, e.message);
+    }
   }
 }
 
@@ -230,12 +277,20 @@ class _SwitchRow extends StatelessWidget {
 }
 
 class _Row extends StatelessWidget {
-  const _Row({required this.icon, required this.title, this.subtitle, this.trailing, required this.onTap});
+  const _Row({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    this.danger = false,
+    required this.onTap,
+  });
 
   final IconData icon;
   final String title;
   final String? subtitle;
   final IconData? trailing;
+  final bool danger;
   final VoidCallback onTap;
 
   @override
@@ -244,8 +299,11 @@ class _Row extends StatelessWidget {
     return _Divided(
       child: ListTile(
         onTap: onTap,
-        leading: Icon(icon, color: c.muted),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14.5)),
+        leading: Icon(icon, color: danger ? c.lossText : c.muted),
+        title: Text(
+          title,
+          style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14.5, color: danger ? c.lossText : null),
+        ),
         subtitle: subtitle == null ? null : MutedText(subtitle!, size: 12),
         trailing: Icon(trailing ?? Icons.chevron_right_rounded, size: 20, color: c.faint),
       ),

@@ -1,7 +1,7 @@
 # Buteo — Pronostics sportifs
 
 Application mobile de pronostics sportifs inspirée de *Multi Betting Tips*, en
-version améliorée. **Statut : application Flutter, étape 1 sur 5 (écrans et données de démonstration).**
+version améliorée. **Statut : application Flutter, étape 2 sur 5 (comptes, équipes favorites, alertes).**
 
 ## Décisions prises
 
@@ -33,11 +33,13 @@ Organisation du code :
 | Dossier | Contenu |
 |---|---|
 | `lib/data/` | Rubriques, offres, pronos de démonstration, statistiques |
-| `lib/state/` | Formule, coupons, thème et notifications de l'utilisateur |
+| `lib/state/` | Formule, coupons, favoris, compte, thème et alertes |
+| `lib/services/` | Firebase : connexion, données du compte, notifications |
 | `lib/theme/` | Couleurs et polices de la marque |
 | `lib/ui/screens/` | Accueil, rubrique, live, stats, offres, profil, démarrage |
 | `lib/ui/widgets/` | Carte de prono, tuiles, badges, fenêtres d'achat |
-| `test/` | Tests automatiques (générateur, états des matchs, écrans) |
+| `test/` | Tests automatiques (générateur, états des matchs, compte, écrans) |
+| `../firebase/` | Règles de sécurité de la base Firestore |
 
 Commandes utiles (dans `app/`) : `flutter test`, `flutter analyze`,
 `flutter build apk --release`, `dart run flutter_launcher_icons` (icône).
@@ -46,14 +48,51 @@ Commandes utiles (dans `app/`) : `flutter test`, `flutter analyze`,
 
 1. **Écrans et données de démonstration** (fait) : toute la maquette en Flutter,
    APK de test construit par GitHub.
-2. **Comptes et notifications** : Firebase, connexion Google et téléphone,
-   notifications à 00:00, équipes favorites.
+2. **Comptes et notifications** (fait, à activer avec ta configuration Firebase) :
+   connexion Google et téléphone, suppression du compte, équipes favorites
+   synchronisées, alerte locale à 00:00 GMT, abonnement aux alertes serveur.
 3. **Moteur de l'IA** : source de données sportives, calcul des probabilités,
    publication automatique à 00:00, résultats en direct.
 4. **Paiements et publicité** : Google Play Billing, Mobile Money et crypto
    sur le site web, AdMob dans la version gratuite.
 5. **Communauté et publication** : concours, journal de paris, back-office,
    test fermé puis mise en ligne sur le Play Store.
+
+## Configurer Firebase (à faire une fois)
+
+Sans cette configuration, l'app marche en mode local : favoris et alertes
+restent sur le téléphone, et la connexion affiche un message d'attente.
+Tout se fait depuis le navigateur du téléphone, sur
+[console.firebase.google.com](https://console.firebase.google.com).
+
+1. **Créer le projet** : « Créer un projet », nom `Buteo`. Google Analytics
+   n'est pas nécessaire.
+2. **Ajouter l'app Android** (icône Android) :
+   - nom du package : `com.buteo.pronostics`
+   - surnom : `Buteo`
+   - empreinte SHA-1 : `73:45:D6:62:17:77:EC:97:81:47:EC:BA:CA:BA:A8:FC:57:58:CD:57`
+
+   Passe les étapes « SDK » (déjà faites dans le code).
+3. **Ajouter la seconde empreinte** : Paramètres du projet (roue dentée) →
+   Vos applications → Buteo → « Ajouter une empreinte » :
+   `71:18:B6:BB:F1:59:0C:12:77:EB:30:FF:64:24:04:69:E1:74:DC:E6:AC:AE:66:EC:43:B2:47:C2:26:6C:23:30`
+4. **Connexion Google** : Authentication → Commencer → Méthode de connexion →
+   Google → Activer, choisis ton adresse d'assistance, Enregistrer.
+5. **Base de données** : Firestore Database → Créer une base de données →
+   emplacement `europe-west1`, mode production. Puis onglet **Règles** :
+   remplace tout par le contenu de [`firebase/firestore.rules`](firebase/firestore.rules)
+   et touche **Publier**.
+6. **Récupérer la configuration** : Paramètres du projet → Vos applications →
+   Buteo → télécharge `google-services.json` (après l'étape 4, pour qu'il
+   contienne l'identifiant Google). Envoie-moi son contenu : ce sont des
+   identifiants publics, la sécurité repose sur les règles de l'étape 5.
+
+**Connexion par SMS (payante)** : elle exige le forfait Blaze (carte
+bancaire). Les 10 premiers SMS par jour sont gratuits, ensuite le prix dépend
+du pays (de 0,01 à environ 0,46 $ par SMS). Pour l'activer : Mettre à niveau →
+Blaze, fixe une **alerte de budget** (par exemple 5 €), puis Authentication →
+Méthode de connexion → Téléphone → Activer. Pour tester sans payer, ajoute des
+« numéros de téléphone de test » avec un code fixe dans le même écran.
 
 ## Paiements
 
