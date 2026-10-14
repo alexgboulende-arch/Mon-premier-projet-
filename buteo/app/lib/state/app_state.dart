@@ -94,10 +94,12 @@ class AppState extends ChangeNotifier {
   bool get signedIn => account != null;
 
   /// À appeler une fois au démarrage : programme les alertes et suit le compte.
+  /// Les alertes se règlent en arrière-plan : sans réseau, l'abonnement aux
+  /// alertes serveur attend la connexion et ne doit pas bloquer l'ouverture.
   Future<void> start() async {
     _accountSub = auth.changes.listen(_onAccount);
     _billingSub = billing.events.listen(_onBilling);
-    await notifier.apply(notifications);
+    unawaited(notifier.apply(notifications));
     await refreshPrices();
   }
 
