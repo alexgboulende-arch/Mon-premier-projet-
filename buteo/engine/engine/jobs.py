@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 from collections import Counter
 from datetime import date as Date
 from datetime import datetime, timedelta, timezone
@@ -25,7 +26,8 @@ STATS_DAYS = 35
 # seulement, pas d'historique de la saison. Le moteur garde lui-même les
 # résultats des championnats suivis (`history/{championnat}`) pour son modèle.
 HISTORY_MAX = 600
-FREE_RESERVE = 3  # requêtes gardées pour les derniers résultats avant minuit
+FREE_RESERVE = 3  # requêtes gardées au minimum pour les derniers résultats avant minuit
+RESULTS_EVERY_MINUTES = 20
 # Le modèle ne pèse pleinement qu'avec assez de matchs connus ; sans historique,
 # les pronos reposent sur les cotes des bookmakers seules.
 MIN_LEAGUE_MATCHES = 50
@@ -119,7 +121,7 @@ def publish(client: api.ApiFootball, store: Store, date: str, now: datetime) -> 
         # Quota limité : les championnats passent dans l'ordre de la liste, les premiers d'abord.
         priority = {lg["id"]: i for i, lg in enumerate(leagues)}
         fixtures.sort(key=lambda f: (priority[f["league"]["id"]], f["fixture"]["date"]))
-        budget = client.remaining() - FREE_RESERVE
+        budget = client.remaining() - free_reserve(now)
     log.info("%d matchs suivis le %s%s", len(fixtures), date, f" (offre gratuite, {budget} cotes au plus)" if free else "")
 
     strengths: dict[int, model.Strengths] = {}
@@ -216,9 +218,19 @@ def stored_history(store: Store, league_id: int) -> list[model.Result]:
     return [model.Result(m["home"], m["away"], m["hg"], m["ag"], _utc(m["played"])) for m in doc["matches"]]
 
 
+def free_reserve(now: datetime) -> int:
+    """Requêtes à garder pour suivre les résultats jusqu'à minuit (le quota repart à 00:00 GMT).
+
+    À 23:35, quelques-unes suffisent ; une publication lancée à la main dans la
+    journée laisse de quoi lire les résultats toutes les 20 minutes jusqu'au soir.
+    """
+    minutes_left = 24 * 60 - (now.hour * 60 + now.minute)
+    return max(FREE_RESERVE, math.ceil(minutes_left / RESULTS_EVERY_MINUTES))
+
+
 def results_due(free: bool, now: datetime) -> bool:
     """Offre gratuite : les résultats sont lus toutes les 20 minutes au lieu de 10."""
-    return not free or now.minute % 20 < 10
+    return not free or now.minute % RESULTS_EVERY_MINUTES < 10
 
 
 def update_results(client: api.ApiFootball, store: Store, now: datetime, notifier: Notifier | None = None) -> int:

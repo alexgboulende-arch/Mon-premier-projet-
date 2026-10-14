@@ -314,3 +314,14 @@ def test_offre_gratuite_resultats_toutes_les_20_minutes():
 
     assert [jobs.results_due(True, at(m)) for m in (0, 10, 20, 30, 40, 50)] == [True, False, True, False, True, False]
     assert all(jobs.results_due(False, at(m)) for m in (0, 10, 20, 30, 40, 50))
+
+
+def test_offre_gratuite_garde_des_requetes_pour_les_resultats_du_jour():
+    """Publication lancée à la main le matin : le quota ne part pas tout en cotes."""
+    assert jobs.free_reserve(EVE) == jobs.FREE_RESERVE  # 23:35
+    morning = datetime(2026, 10, 14, 10, 0, tzinfo=timezone.utc)
+    assert jobs.free_reserve(morning) == 42  # 14 heures de résultats, toutes les 20 minutes
+    store = MemoryStore()
+    api = SampleApi(DATE, free=True, limit=100)
+    jobs.publish(api, store, DATE, morning)
+    assert api.remaining() >= 42
