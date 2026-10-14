@@ -23,7 +23,7 @@ from datetime import datetime, timedelta, timezone
 from . import jobs
 from .notify import Notifier, firebase_sender
 from .sample import SampleApi
-from .store import FirestoreStore, MemoryStore
+from .store import BadServiceAccount, FirestoreStore, MemoryStore
 
 
 def _default_date(now: datetime) -> str:
@@ -108,6 +108,9 @@ def main(argv: list[str] | None = None) -> int:
             raise
         # Quota du jour atteint ou date hors de l'offre : on réessaiera au prochain passage.
         print(f"::warning::API-Football a refusé la demande : {e}")
+    except BadServiceAccount as e:
+        print(f"::error::{e}")
+        return 1
     return 0
 
 

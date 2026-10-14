@@ -325,3 +325,16 @@ def test_offre_gratuite_garde_des_requetes_pour_les_resultats_du_jour():
     api = SampleApi(DATE, free=True, limit=100)
     jobs.publish(api, store, DATE, morning)
     assert api.remaining() >= 42
+
+
+def test_secret_firebase_mal_colle():
+    import json
+
+    from engine.store import BadServiceAccount, service_account
+
+    google_services = json.dumps({"project_info": {"project_id": "buteo-bbec5"}, "client": []})
+    with pytest.raises(BadServiceAccount, match="google-services.json"):
+        service_account(google_services)
+    with pytest.raises(BadServiceAccount, match="pas un fichier JSON complet"):
+        service_account('{"type": "service_account", "project_id"')
+    assert service_account('{"type": "service_account"}')["type"] == "service_account"
