@@ -7,7 +7,8 @@
 
 `publier` et `resultats` lisent API_FOOTBALL_KEY et FIREBASE_SERVICE_ACCOUNT.
 Sans ces variables, ils s'arrêtent sans erreur (le dépôt peut tourner sans
-clés tant que le service n'est pas souscrit).
+clés tant que le service n'est pas souscrit). Avec l'offre gratuite
+d'API-Football, le moteur passe seul en mode économique (voir jobs.py).
 """
 
 from __future__ import annotations
@@ -89,15 +90,24 @@ def main(argv: list[str] | None = None) -> int:
 
     if not _keys_present():
         return 0
-    from .api_football import ApiFootball
+    from .api_football import ApiError, ApiFootball
 
     client = ApiFootball(os.environ["API_FOOTBALL_KEY"])
-    store = FirestoreStore()
-    if args.command == "publier":
-        jobs.publish(client, store, args.date or _default_date(now), now)
-    else:
-        changed = jobs.update_results(client, store, now, Notifier(firebase_sender))
-        print(f"{changed} pronos mis à jour ({client.calls} requêtes API)")
+    try:
+        if args.command == "resultats" and not jobs.results_due(client.free, now):
+            print("Offre gratuite : résultats lus toutes les 20 minutes, rien à faire maintenant.")
+            return 0
+        store = FirestoreStore()
+        if args.command == "publier":
+            jobs.publish(client, store, args.date or _default_date(now), now)
+        else:
+            changed = jobs.update_results(client, store, now, Notifier(firebase_sender))
+            print(f"{changed} pronos mis à jour ({client.calls} requêtes API)")
+    except ApiError as e:
+        if not e.restricted:
+            raise
+        # Quota du jour atteint ou date hors de l'offre : on réessaiera au prochain passage.
+        print(f"::warning::API-Football a refusé la demande : {e}")
     return 0
 
 

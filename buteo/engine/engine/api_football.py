@@ -21,7 +21,11 @@ CANCELLED = {"PST", "CANC", "ABD", "AWD", "WO"}
 
 
 class ApiError(RuntimeError):
-    pass
+    @property
+    def restricted(self) -> bool:
+        """Refus lié au forfait (offre gratuite) ou au quota du jour."""
+        text = str(self).lower()
+        return "free plans" in text or "request limit" in text or "reached the limit" in text
 
 
 @dataclass(frozen=True)
@@ -65,6 +69,29 @@ class ApiFootball:
         self._session = session or requests.Session()
         self._session.headers.update({"x-apisports-key": key})
         self.calls = 0
+        self._plan: str | None = None
+
+    def status(self) -> dict:
+        """Forfait et requêtes du jour. Cette page ne compte pas dans le quota."""
+        r = self._session.get(f"{BASE_URL}/status", timeout=30)
+        r.raise_for_status()
+        data = r.json()
+        if data.get("errors"):
+            raise ApiError(f"status : {data['errors']}")
+        resp = data.get("response") or {}
+        sub, req = resp.get("subscription", {}), resp.get("requests", {})
+        return {"plan": sub.get("plan", ""), "current": req.get("current", 0), "limit_day": req.get("limit_day", 0)}
+
+    @property
+    def free(self) -> bool:
+        """Offre gratuite : 100 requêtes par jour, matchs d'hier à demain seulement."""
+        if self._plan is None:
+            self._plan = self.status()["plan"]
+        return "free" in self._plan.lower()
+
+    def remaining(self) -> int:
+        s = self.status()
+        return max(0, s["limit_day"] - s["current"])
 
     def get(self, path: str, **params) -> list[dict]:
         """Toutes les pages d'une requête."""

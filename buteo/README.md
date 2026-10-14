@@ -110,9 +110,12 @@ enregistrées comme **secrets** du dépôt (GitHub → Settings → Secrets and
 variables → Actions → New repository secret) :
 
 1. **`API_FOOTBALL_KEY`** : crée un compte sur
-   [dashboard.api-football.com](https://dashboard.api-football.com) et prends
-   l'offre **Pro** (environ 19 $ par mois). L'offre gratuite ne donne pas
-   accès à la saison en cours. Copie la clé affichée dans le tableau de bord.
+   [dashboard.api-football.com](https://dashboard.api-football.com), puis
+   copie la clé (menu → Compte → Mon accès). **Fait** avec l'offre gratuite :
+   le moteur tourne alors en mode économique (100 requêtes par jour, modèle
+   qui apprend au fil des semaines, résultats toutes les 20 minutes ; voir
+   `engine/README.md`). L'offre **Pro** (environ 19 $ par mois) rend tout son
+   historique au modèle : il suffit de garder la même clé en changeant d'offre.
 2. **`FIREBASE_SERVICE_ACCOUNT`** : console Firebase → Paramètres du projet →
    Comptes de service → « Générer une nouvelle clé privée ». Colle tout le
    contenu du fichier téléchargé. Cette clé est **secrète** : ne la partage

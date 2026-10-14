@@ -245,3 +245,72 @@ def test_les_championnats_sont_gardes_une_semaine(published):
     assert api.calls == calls
     jobs.resolve_leagues(api, store, EVE + timedelta(days=8))
     assert api.calls > calls
+
+
+# --- Offre gratuite d'API-Football ----------------------------------------------
+
+
+def test_offre_gratuite_publie_sans_historique_avec_les_cotes():
+    """Pas d'historique de la saison : les pronos reposent sur les cotes seules."""
+    store = MemoryStore()
+    api = SampleApi(DATE, free=True, limit=100)
+    chosen = jobs.publish(api, store, DATE, EVE)
+    assert sum(len(items) for items in chosen.values()) > 0
+    for rubric, items in chosen.items():
+        rule = RULES[rubric]
+        for c in items:
+            assert c.market in rule.markets and rule.odds[0] <= c.odds <= rule.odds[1]
+    cfg = store.get("config/engine")
+    assert cfg["plan"] == "gratuit" and cfg["active"] is True
+    assert api.calls <= 100
+
+
+def test_offre_gratuite_respecte_le_quota_du_jour():
+    store = MemoryStore()
+    from engine.api_football import LEAGUES
+
+    api = SampleApi(DATE, free=True, limit=25)
+    jobs.publish(api, store, DATE, EVE)
+    # Championnats (une recherche par pays, une fois par semaine) et 3 journées de matchs,
+    # puis les cotes jusqu'à la réserve gardée pour les derniers résultats.
+    setup = len({lg.api_country for lg in LEAGUES}) + 3
+    assert api.odds_calls == 25 - setup - jobs.FREE_RESERVE > 0
+    assert api.calls == 25 - jobs.FREE_RESERVE
+
+
+def test_offre_gratuite_resultats_par_date_et_historique_garde():
+    store = MemoryStore()
+    api = SampleApi(DATE, free=True, limit=100)
+    jobs.publish(api, store, DATE, EVE)
+    api.clock = NIGHT
+    calls = api.calls
+    changed = jobs.update_results(api, store, NIGHT, Notifier())
+    assert changed > 0
+    assert api.calls == calls + 1  # une seule requête pour toute la journée
+    docs = store.query_picks(DATE)
+    assert all(t["status"] in ("won", "lost") for d in docs.values() for t in d["tips"])
+    # Les matchs terminés nourrissent l'historique du modèle.
+    history = jobs.stored_history(store, 61)
+    assert len(history) == 5 and all(r.played.date().isoformat() == DATE for r in history)
+    # Un second passage n'ajoute pas les mêmes matchs deux fois.
+    jobs.record_history(store, {61: {"name": "Ligue 1"}}, api.fixtures_on(DATE), NIGHT)
+    assert len(jobs.stored_history(store, 61)) == 5
+
+
+def test_poids_du_modele_selon_l_historique():
+    from collections import Counter
+
+    from engine.selection import MODEL_WEIGHT
+
+    games = Counter({"A": 10, "B": 3})
+    assert jobs.model_weight(0, Counter(), "A", "B") == 0
+    assert jobs.model_weight(200, games, "A", "B") == pytest.approx(MODEL_WEIGHT * 3 / jobs.MIN_TEAM_MATCHES)
+    assert jobs.model_weight(200, Counter({"A": 10, "B": 10}), "A", "B") == MODEL_WEIGHT
+
+
+def test_offre_gratuite_resultats_toutes_les_20_minutes():
+    def at(minute):
+        return datetime(2026, 10, 14, 15, minute, tzinfo=timezone.utc)
+
+    assert [jobs.results_due(True, at(m)) for m in (0, 10, 20, 30, 40, 50)] == [True, False, True, False, True, False]
+    assert all(jobs.results_due(False, at(m)) for m in (0, 10, 20, 30, 40, 50))

@@ -12,6 +12,7 @@ import random
 from datetime import datetime, timedelta, timezone
 
 from . import model
+from .api_football import ApiError
 
 _LEAGUES = {
     61: ("France", "Ligue 1", ["PSG", "Marseille", "Lyon", "Monaco", "Lille", "Lens", "Rennes", "Nice", "Nantes", "Brest"]),
@@ -34,10 +35,20 @@ def _poisson_sample(rng: random.Random, lam: float) -> int:
 
 
 class SampleApi:
-    """Même interface que `ApiFootball`, sans réseau."""
+    """Même interface que `ApiFootball`, sans réseau.
 
-    def __init__(self, date: str, seed: int = 7):
+    Avec `free=True`, elle se comporte comme l'offre gratuite : quota de
+    `limit` requêtes, ni historique de la saison ni recherche par identifiants.
+    `clock` fixe l'heure vue par `fixtures_on` (matchs joués ou à venir).
+    """
+
+    def __init__(self, date: str, seed: int = 7, free: bool = False, limit: int = 7500):
         self.calls = 0
+        self.odds_calls = 0
+        self.free = free
+        self.limit = limit
+        self.clock: datetime | None = None
+        self._played: dict[int, dict] = {}
         self._rng = random.Random(seed)
         self._day = datetime.fromisoformat(date).replace(tzinfo=timezone.utc)
         self._strength = {}
@@ -97,6 +108,12 @@ class SampleApi:
 
     # --- Interface d'ApiFootball -------------------------------------------------
 
+    def status(self) -> dict:
+        return {"plan": "Free" if self.free else "Pro", "current": self.calls, "limit_day": self.limit}
+
+    def remaining(self) -> int:
+        return max(0, self.limit - self.calls)
+
     def current_leagues(self, country: str) -> list[dict]:
         self.calls += 1
         return [
@@ -107,14 +124,25 @@ class SampleApi:
 
     def fixtures_on(self, date: str) -> list[dict]:
         self.calls += 1
-        return [f for f in self._fixtures if f["fixture"]["date"].startswith(date)]
+        past = [f for games in self._history.values() for f in games if f["fixture"]["date"].startswith(date)]
+        day = []
+        for f in self._fixtures:
+            if not f["fixture"]["date"].startswith(date):
+                continue
+            kickoff = datetime.fromisoformat(f["fixture"]["date"])
+            ended = self.clock is not None and self.clock >= kickoff + timedelta(hours=2)
+            day.append(self._play(f) if ended else f)
+        return past + day
 
     def finished(self, league_id: int, season: int) -> list[dict]:
         self.calls += 1
+        if self.free:
+            raise ApiError("fixtures : {'plan': 'Free plans do not have access to this season, try from 2022 to 2024.'}")
         return self._history.get(league_id, []) if season == 2026 else []
 
     def odds(self, fixture_id: int) -> list[dict]:
         self.calls += 1
+        self.odds_calls += 1
         f = next(f for f in self._fixtures if f["fixture"]["id"] == fixture_id)
         lh, la = self._lambdas(f["teams"]["home"]["name"], f["teams"]["away"]["name"])
         p = model.market_probabilities(lh, la)
@@ -154,10 +182,14 @@ class SampleApi:
     def fixtures_by_ids(self, ids: list[int]) -> list[dict]:
         """Matchs joués : le score est tiré selon les vraies forces des équipes."""
         self.calls += 1
-        out = []
-        for f in self._fixtures:
-            if f["fixture"]["id"] not in ids:
-                continue
+        if self.free:
+            raise ApiError("fixtures : {'plan': 'Free plans do not have access to the Ids parameter.'}")
+        return [self._play(f) for f in self._fixtures if f["fixture"]["id"] in ids]
+
+    def _play(self, f: dict) -> dict:
+        """Le match terminé (score tiré une fois pour toutes)."""
+        fid = f["fixture"]["id"]
+        if fid not in self._played:
             lh, la = self._lambdas(f["teams"]["home"]["name"], f["teams"]["away"]["name"])
             gh, ga = _poisson_sample(self._rng, lh), _poisson_sample(self._rng, la)
             hh = sum(1 for _ in range(gh) if self._rng.random() < model.FIRST_HALF_SHARE)
@@ -166,5 +198,5 @@ class SampleApi:
             done["fixture"] = {**f["fixture"], "status": {"short": "FT", "elapsed": 90}}
             done["goals"] = {"home": gh, "away": ga}
             done["score"] = {"halftime": {"home": hh, "away": ha}, "fulltime": {"home": gh, "away": ga}}
-            out.append(done)
-        return out
+            self._played[fid] = done
+        return self._played[fid]

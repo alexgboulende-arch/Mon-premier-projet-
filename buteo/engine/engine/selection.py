@@ -75,17 +75,19 @@ RULES: dict[str, Rule] = {
 }
 
 
-def blend(model: dict[str, float], bookmaker: dict[str, float]) -> dict[str, float]:
+def blend(model: dict[str, float], bookmaker: dict[str, float], weight: float = MODEL_WEIGHT) -> dict[str, float]:
     """Mélange la probabilité du modèle et celle des bookmakers."""
     out = {}
     for code, p_book in bookmaker.items():
         p_model = model.get(code)
-        out[code] = p_book if p_model is None else MODEL_WEIGHT * p_model + (1 - MODEL_WEIGHT) * p_book
+        out[code] = p_book if p_model is None else weight * p_model + (1 - weight) * p_book
     return out
 
 
-def candidates(fixture: Fixture, model: dict[str, float], odds: dict[str, float]) -> list[Candidate]:
-    probabilities = blend(model, markets.market_probabilities_from_odds(odds))
+def candidates(
+    fixture: Fixture, model: dict[str, float], odds: dict[str, float], model_weight: float = MODEL_WEIGHT
+) -> list[Candidate]:
+    probabilities = blend(model, markets.market_probabilities_from_odds(odds), model_weight)
     return [
         Candidate(fixture, code, odds[code], probabilities[code])
         for code in odds

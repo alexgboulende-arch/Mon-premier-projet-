@@ -25,6 +25,26 @@ résultats pendant les matchs. Il tourne sur GitHub Actions
 
 Le football couvre 10 rubriques. Basket, tennis et live viendront ensuite.
 
+## Offre gratuite d'API-Football
+
+Le moteur reconnaît seul le forfait de la clé (page `status`, qui ne compte
+pas dans le quota). Avec l'offre gratuite (100 requêtes par jour, matchs
+d'hier à demain seulement, ni historique de la saison ni recherche par
+identifiants), il passe en mode économique :
+
+- **Historique** : il garde lui-même les matchs terminés des championnats
+  suivis (`history/{championnat}` dans Firestore). Tant qu'un championnat a
+  moins de 50 matchs connus, ou une équipe moins de 6, le modèle pèse moins
+  et les pronos reposent surtout sur les cotes des bookmakers.
+- **Cotes** : demandées match par match, dans l'ordre de la liste des
+  championnats, jusqu'au quota du jour (3 requêtes gardées en réserve).
+- **Résultats** : tous les matchs du jour en une requête, toutes les 20 minutes.
+- Un refus de l'API (quota atteint, date hors de l'offre) est signalé dans
+  le journal sans faire échouer la tâche.
+
+Il suffit de remplacer la clé par celle d'une offre payante pour repasser en
+mode complet. `python -m engine diagnostic` montre ce que permet une clé.
+
 ## Commandes
 
 ```bash
@@ -33,6 +53,7 @@ python -m pytest                 # tests
 python -m engine essai           # essai complet hors ligne, données simulées
 python -m engine publier         # pronos du jour (clés nécessaires)
 python -m engine resultats       # mise à jour des résultats (clés nécessaires)
+python -m engine diagnostic      # ce que permet la clé API-Football
 ```
 
 `exemple_picks.json` est produit par `python -m engine essai --json exemple_picks.json`.
