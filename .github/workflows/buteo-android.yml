@@ -81,6 +81,59 @@ jobs:
           name: buteo-play-store
           path: buteo/app/build/app/outputs/bundle/release/app-release.aab
 
+  demarrage:
+    name: Ouvrir l'app sur Android ${{ matrix.android }}
+    needs: apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - android: '11'
+            api: 30
+          - android: '15'
+            api: 35
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: buteo-apk
+
+      - name: Activer l'accélération de l'émulateur
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Installer et ouvrir Buteo
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          script: bash buteo/app/tool/demarrage_emulateur.sh buteo-test.apk demarrage
+
+      - name: Garder la capture et le journal
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: demarrage-android-${{ matrix.android }}
+          path: demarrage/
+
+  publier:
+    name: Publier la version de test
+    needs: [apk, demarrage]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: buteo-apk
+
       - name: Placer l'étiquette « buteo-test » sur ce commit
         run: |
           git tag -f buteo-test "$GITHUB_SHA"
@@ -92,7 +145,7 @@ jobs:
           tag_name: buteo-test
           name: Buteo – version de test
           prerelease: true
-          files: buteo/app/build/buteo-test.apk
+          files: buteo-test.apk
           body: |
             Version de test de Buteo, construite automatiquement depuis le commit ${{ github.sha }}.
 
