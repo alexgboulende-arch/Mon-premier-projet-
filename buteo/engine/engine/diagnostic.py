@@ -136,10 +136,22 @@ def run(key: str, now: datetime) -> None:
             p.report("Cotes par championnat et date", data is not None,
                      f"{len(data.get('response', []))} matchs" if data else err)
 
-    data, err = p.call("status")
-    if data:
-        req = (data.get("response") or {}).get("requests", {})
-        print(f"Requêtes utilisées après le test : {req.get('current')}/{req.get('limit_day')}")
+    tracked = _ours(by_day.get("demain") or []) or by_day.get("demain") or []
+    if tracked:
+        fid = tracked[0]["fixture"]["id"]
+        data, err = p.call("odds", fixture=fid)
+        if data is None:
+            p.report("Cotes d'un match précis", False, err)
+        else:
+            items = data.get("response", [])
+            books = items[0].get("bookmakers", []) if items else []
+            p.report("Cotes d'un match précis", True, f"{len(books)} bookmakers (match {fid})")
+
+    for _ in range(2):  # deux lectures : la page d'état compte-t-elle dans le quota ?
+        data, err = p.call("status")
+        if data:
+            req = (data.get("response") or {}).get("requests", {})
+            print(f"Requêtes utilisées après le test : {req.get('current')}/{req.get('limit_day')}")
 
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:
