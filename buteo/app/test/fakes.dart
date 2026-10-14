@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:buteo/data/models.dart';
 import 'package:buteo/services/auth_service.dart';
+import 'package:buteo/services/billing_service.dart';
 import 'package:buteo/services/notification_service.dart';
 import 'package:buteo/services/user_store.dart';
 
@@ -73,4 +75,49 @@ class FakeNotificationService implements NotificationService {
 
   @override
   Future<String?> pushToken() async => 'jeton-test';
+}
+
+/// Google Play simulé : chaque achat est accepté, comme si le serveur l'avait vérifié.
+class FakeBillingService implements BillingService {
+  FakeBillingService({this.available = true, String? today})
+    : today = today ?? DateTime.now().toUtc().toIso8601String().substring(0, 10);
+
+  @override
+  final bool available;
+
+  /// Jour du coupon, comme le fixe le serveur (« 2026-10-13 »).
+  final String today;
+  final _events = StreamController<BillingEvent>.broadcast();
+  final bought = <String>[];
+
+  @override
+  Stream<BillingEvent> get events => _events.stream;
+
+  @override
+  Future<Map<String, String>> prices() async => {PlayProducts.coupon: '500 FCFA'};
+
+  @override
+  Future<void> buySubscription(Tier tier, int months) async {
+    bought.add('${PlayProducts.subscriptionFor(tier)}/${PlayProducts.basePlans[months]}');
+    _events.add(
+      PurchaseGranted(
+        Entitlement(
+          tier: tier,
+          tierUntil: DateTime.now().toUtc().add(Duration(days: 30 * months)),
+        ),
+        coupon: false,
+      ),
+    );
+  }
+
+  @override
+  Future<void> buyCoupon(Rubric rubric) async {
+    bought.add('${PlayProducts.coupon}:${rubric.id}');
+    _events.add(PurchaseGranted(Entitlement(tier: Tier.free, coupons: ['$today|${rubric.id}']), coupon: true));
+  }
+
+  void pending() => _events.add(const PurchasePending());
+
+  @override
+  Future<void> restore() async {}
 }

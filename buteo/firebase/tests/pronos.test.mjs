@@ -14,8 +14,10 @@ await env.withSecurityRulesDisabled(async (ctx) => {
   await setDoc(doc(db, 'picks/2026-10-14_c10'), { date: '2026-10-14', rubric: 'c10', tier: 'pro', publicAfter: tomorrow });
   await setDoc(doc(db, 'picks/2026-10-14_score'), { date: '2026-10-14', rubric: 'score', tier: 'elite', publicAfter: tomorrow });
   await setDoc(doc(db, 'picks/2026-10-13_score'), { date: '2026-10-13', rubric: 'score', tier: 'elite', publicAfter: past });
-  await setDoc(doc(db, 'users/pro'), { tier: 'pro' });
-  await setDoc(doc(db, 'users/elite'), { tier: 'elite' });
+  await setDoc(doc(db, 'users/pro'), { tier: 'pro', tierUntil: tomorrow });
+  await setDoc(doc(db, 'users/elite'), { tier: 'elite', tierUntil: tomorrow });
+  await setDoc(doc(db, 'users/expire'), { tier: 'elite', tierUntil: past });
+  await setDoc(doc(db, 'purchases/abc'), { uid: 'elite', token: 'secret' });
   await setDoc(doc(db, 'users/coupon'), { coupons: ['2026-10-14|score'] });
   await setDoc(doc(db, 'stats/summary'), { days: {} });
 });
@@ -36,6 +38,8 @@ await check('rubrique Élite, formule Élite : lisible', assertSucceeds(getDoc(d
 await check('rubrique Pro, formule Élite : lisible', assertSucceeds(getDoc(doc(as('elite'), 'picks/2026-10-14_c10'))));
 await check('coupon du jour pour cette rubrique : lisible', assertSucceeds(getDoc(doc(as('coupon'), 'picks/2026-10-14_score'))));
 await check('coupon d’une autre rubrique : refusé', assertFails(getDoc(doc(as('coupon'), 'picks/2026-10-14_c10'))));
+await check('formule Élite arrivée à échéance : refusé', assertFails(getDoc(doc(as('expire'), 'picks/2026-10-14_score'))));
+await check('lire les achats (jetons Google) : refusé', assertFails(getDoc(doc(as('elite'), 'purchases/abc'))));
 await check('VIP de la veille : public', assertSucceeds(getDoc(doc(anon, 'picks/2026-10-13_score'))));
 await check('écrire un prono depuis l’app : refusé', assertFails(setDoc(doc(as('elite'), 'picks/2026-10-14_score'), { tier: 'free' })));
 await check('écrire les statistiques : refusé', assertFails(setDoc(doc(as('elite'), 'stats/summary'), { days: {} })));

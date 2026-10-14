@@ -5,7 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/models.dart';
 import '../data/tips_repository.dart';
+import '../services/ads_service.dart';
 import '../services/auth_service.dart';
+import '../services/billing_service.dart';
 import '../services/notification_service.dart';
 import '../services/user_store.dart';
 
@@ -22,6 +24,8 @@ class AppState extends ChangeNotifier {
     this.store = const NoUserStore(),
     this.notifier = const SilentNotificationService(),
     this.demoMode = true,
+    this.billing = const UnavailableBillingService(),
+    this.ads = const NoAdsService(),
   }) {
     final saved = _prefs.getString(_kTier);
     _demoTier = Tier.values.firstWhere((t) => t.name == saved, orElse: () => Tier.free);
@@ -44,7 +48,17 @@ class AppState extends ChangeNotifier {
   final AuthService auth;
   final UserStore store;
   final NotificationService notifier;
+  final BillingService billing;
+  final AdsService ads;
   StreamSubscription<Account?>? _accountSub;
+  StreamSubscription<BillingEvent>? _billingSub;
+  final _notices = StreamController<String>.broadcast();
+
+  /// Messages à afficher (achat confirmé, paiement en attente…).
+  Stream<String> get notices => _notices.stream;
+
+  /// Prix affichés par Google Play, par produit et forfait (« buteo_pro/mensuel »).
+  Map<String, String> playPrices = const {};
 
   /// Données de démonstration : la formule et les coupons sont simulés sur le
   /// téléphone. Avec les vraies données, ils viennent du serveur (profil Firestore).
@@ -55,9 +69,16 @@ class AppState extends ChangeNotifier {
 
   Tier _demoTier = Tier.free;
   Tier serverTier = Tier.free;
+  DateTime? serverTierUntil;
   Set<String> _serverCoupons = {};
 
-  Tier get tier => demoMode ? _demoTier : serverTier;
+  /// Formule en cours : simulée en démonstration, sinon celle payée et pas encore échue.
+  Tier get tier {
+    if (demoMode) return _demoTier;
+    final until = serverTierUntil;
+    return until != null && until.isAfter(DateTime.now().toUtc()) ? serverTier : Tier.free;
+  }
+
   Set<String> _unlocked = {};
   Set<String> _favorites = {};
   bool lightTheme = false;
@@ -75,13 +96,49 @@ class AppState extends ChangeNotifier {
   /// À appeler une fois au démarrage : programme les alertes et suit le compte.
   Future<void> start() async {
     _accountSub = auth.changes.listen(_onAccount);
+    _billingSub = billing.events.listen(_onBilling);
     await notifier.apply(notifications);
+    await refreshPrices();
+  }
+
+  /// Prix locaux affichés par Google Play.
+  Future<void> refreshPrices() async {
+    if (!billing.available) return;
+    playPrices = await billing.prices();
+    notifyListeners();
   }
 
   @override
   void dispose() {
     _accountSub?.cancel();
+    _billingSub?.cancel();
+    _notices.close();
     super.dispose();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Achats Google Play (vraies données)
+
+  Future<void> buySubscription(Tier t, int months) => billing.buySubscription(t, months);
+
+  Future<void> buyCoupon(Rubric r) => billing.buyCoupon(r);
+
+  Future<void> restorePurchases() => billing.restore();
+
+  void _onBilling(BillingEvent e) {
+    switch (e) {
+      case PurchaseGranted(:final entitlement, :final coupon):
+        serverTier = entitlement.tier;
+        serverTierUntil = entitlement.tierUntil;
+        _serverCoupons = {...entitlement.coupons};
+        onAccessChanged?.call();
+        notifyListeners();
+        _notices.add(coupon ? 'Coupon débloqué pour aujourd’hui' : 'Bienvenue dans la formule ${tier.label}');
+      case PurchasePending():
+        _notices.add('Paiement en attente : l’accès s’ouvrira dès sa confirmation par Google Play.');
+      case PurchaseFailed(:final message):
+        _notices.add(message);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -178,6 +235,7 @@ class AppState extends ChangeNotifier {
     account = a;
     if (a == null) {
       serverTier = Tier.free;
+      serverTierUntil = null;
       _serverCoupons = {};
       if (previous != null) onAccessChanged?.call();
     }
@@ -212,6 +270,8 @@ class AppState extends ChangeNotifier {
   void _readAccess(Map<String, dynamic>? remote) {
     final saved = remote?['tier'];
     serverTier = Tier.values.firstWhere((t) => t.name == saved, orElse: () => Tier.free);
+    final until = remote?['tierUntil'];
+    serverTierUntil = until is DateTime ? until : null;
     _serverCoupons = {...List<String>.from(remote?['coupons'] as List? ?? const [])};
     onAccessChanged?.call();
     notifyListeners();

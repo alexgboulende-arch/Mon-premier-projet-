@@ -22,6 +22,7 @@ class Shell extends StatefulWidget {
 
 class _ShellState extends State<Shell> {
   Timer? _tick;
+  StreamSubscription<String>? _notices;
 
   static const _titles = [null, 'En direct', 'Statistiques', 'Offres', 'Profil'];
   static const _pages = [HomeScreen(), LiveScreen(), StatsScreen(), OffersScreen(), ProfileScreen()];
@@ -33,13 +34,20 @@ class _ShellState extends State<Shell> {
     _tick = Timer.periodic(const Duration(minutes: 1), (_) => AppScope.read(context).tick());
     // Premier lancement : demande l'autorisation d'envoyer les alertes de 00:00.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) AppScope.read(context).askNotificationPermissionOnce();
+      if (!mounted) return;
+      final state = AppScope.read(context);
+      state.askNotificationPermissionOnce();
+      // Résultat des achats (confirmé, en attente, refusé), quel que soit l'écran affiché.
+      _notices = state.notices.listen((message) {
+        if (mounted) showToast(context, message);
+      });
     });
   }
 
   @override
   void dispose() {
     _tick?.cancel();
+    _notices?.cancel();
     super.dispose();
   }
 

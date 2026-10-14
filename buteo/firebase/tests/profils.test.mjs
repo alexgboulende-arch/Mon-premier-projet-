@@ -17,6 +17,7 @@ await check('mettre à jour ses favoris', assertSucceeds(setDoc(doc(awa, 'users/
 await check('lire son profil', assertSucceeds(getDoc(doc(awa, 'users/awa'))));
 await check("se donner la formule Élite à la création : refusé", assertFails(setDoc(doc(moussa, 'users/moussa'), { tier: 'elite' })));
 await check("se donner la formule Élite ensuite : refusé", assertFails(updateDoc(doc(awa, 'users/awa'), { tier: 'elite' })));
+await check("prolonger soi-même sa formule : refusé", assertFails(setDoc(doc(awa, 'users/awa'), { tierUntil: new Date(2030, 0, 1) }, { merge: true })));
 await check("s'ajouter des coupons : refusé", assertFails(setDoc(doc(awa, 'users/awa'), { coupons: ['score'] }, { merge: true })));
 await check("lire le profil d'un autre : refusé", assertFails(getDoc(doc(moussa, 'users/awa'))));
 await check("modifier le profil d'un autre : refusé", assertFails(setDoc(doc(moussa, 'users/awa'), { favorites: [] }, { merge: true })));

@@ -1,7 +1,8 @@
 # Buteo — Pronostics sportifs
 
 Application mobile de pronostics sportifs inspirée de *Multi Betting Tips*, en
-version améliorée. **Statut : étape 3 sur 5 (moteur de pronostics), en attente des clés pour tourner sur de vraies données.**
+version améliorée. **Statut : étape 4 sur 5 (paiements et publicité), en attente de ta
+configuration Firebase, Google Play et AdMob pour passer en réel.**
 
 ## Décisions prises
 
@@ -34,12 +35,12 @@ Organisation du code :
 |---|---|
 | `lib/data/` | Rubriques, offres, pronos de démonstration, statistiques |
 | `lib/state/` | Formule, coupons, favoris, compte, thème et alertes |
-| `lib/services/` | Firebase : connexion, données du compte, notifications |
+| `lib/services/` | Firebase : connexion, données du compte, notifications ; paiement Google Play, publicité AdMob |
 | `lib/theme/` | Couleurs et polices de la marque |
 | `lib/ui/screens/` | Accueil, rubrique, live, stats, offres, profil, démarrage |
 | `lib/ui/widgets/` | Carte de prono, tuiles, badges, fenêtres d'achat |
 | `test/` | Tests automatiques (générateur, états des matchs, compte, écrans) |
-| `../firebase/` | Règles de sécurité de la base Firestore et leurs tests |
+| `../firebase/` | Règles de sécurité de la base Firestore, fonctions serveur (vérification des achats) et leurs tests |
 | `../engine/` | Moteur de pronostics en Python (voir son README) |
 
 Commandes utiles (dans `app/`) : `flutter test`, `flutter analyze`,
@@ -56,8 +57,10 @@ Commandes utiles (dans `app/`) : `flutter test`, `flutter analyze`,
    choix des pronos de football, publication chaque nuit, résultats toutes les
    10 minutes, statistiques, notification des résultats. L'app passe seule des
    données de démonstration aux vrais pronos dès la première publication.
-4. **Paiements et publicité** : Google Play Billing, Mobile Money et crypto
-   sur le site web, AdMob dans la version gratuite.
+4. **Paiements et publicité** (partie Google Play faite, à activer avec tes
+   comptes) : abonnements et coupons Google Play vérifiés par le serveur,
+   bannière AdMob dans la version gratuite. Reste le site web pour Mobile Money
+   et crypto, une fois le prestataire choisi.
 5. **Communauté et publication** : concours, journal de paris, back-office,
    test fermé puis mise en ligne sur le Play Store.
 
@@ -124,6 +127,82 @@ pronostics » → Run workflow → tâche `publier`.
 les statistiques publiques montreront ses vrais résultats. Le modèle est testé
 sur des données simulées, pas encore sur la vraie saison.
 
+## Activer les paiements et la publicité (étape 4)
+
+Sans cette configuration, l'app reste utilisable : un achat explique qu'il faut
+passer par le Play Store, et la publicité affiche les annonces de test de Google.
+Les étapes 1 et 2 se font une fois Firebase configuré (voir plus haut).
+
+1. **Forfait Blaze** (carte bancaire) : console Firebase → Mettre à niveau →
+   Blaze, puis fixe tout de suite une **alerte de budget** (par exemple 5 €).
+   Avec peu d'utilisateurs, les fonctions de Buteo restent en général dans la
+   part gratuite.
+2. **Publier les fonctions et les règles** depuis GitHub, avec le secret
+   `FIREBASE_SERVICE_ACCOUNT` de l'étape 3 :
+   - Google Cloud ([console.cloud.google.com](https://console.cloud.google.com),
+     même projet) → IAM et administration → IAM → ligne
+     `firebase-adminsdk-…` → crayon → « Ajouter un autre rôle », sept fois :
+     *Administrateur Cloud Functions*, *Utilisateur du compte de service*,
+     *Administrateur Cloud Run*, *Administrateur Cloud Scheduler*,
+     *Administrateur Artifact Registry*, *Administrateur Firebase Rules*,
+     *Administrateur Service Usage*. Enregistrer.
+   - GitHub → Actions → « Buteo – déploiement Firebase » → Run workflow →
+     `tout`. (Ce bouton n'apparaît qu'une fois le code fusionné dans `main`.)
+     Si une ligne rouge parle de permission, envoie-la-moi.
+3. **Compte Google Play Console** (25 $, une seule fois) sur
+   [play.google.com/console](https://play.google.com/console). En compte
+   personnel, Google vérifie ton identité, puis exige un **test fermé de 12
+   testeurs pendant 14 jours** avant la mise en ligne (étape 5).
+   Dans Paramètres → **Profil de paiement**, vérifie que le Gabon est accepté
+   pour vendre : sans profil de paiement, l'app peut être publiée mais pas
+   vendre d'abonnements.
+4. **Clé d'envoi** (sur ton PC Windows, une seule fois) : installe Java
+   ([adoptium.net](https://adoptium.net)), puis dans PowerShell :
+
+   ```
+   keytool -genkeypair -v -keystore buteo-upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000
+   [Convert]::ToBase64String([IO.File]::ReadAllBytes("buteo-upload.jks")) | Set-Clipboard
+   ```
+
+   Ajoute deux secrets GitHub : `ANDROID_UPLOAD_KEYSTORE` (colle le texte
+   copié) et `ANDROID_UPLOAD_PASSWORD` (le mot de passe choisi). Garde le
+   fichier `.jks` et son mot de passe en lieu sûr, hors du dépôt. Chaque
+   construction produit alors aussi `buteo-play-store` (Actions → la dernière
+   exécution → Artifacts) : c'est le fichier `.aab` à envoyer sur Google Play.
+5. **Première version sur Google Play** : crée l'app « Buteo », active la
+   signature par Google Play, envoie le `.aab` en **test interne**. Puis, dans
+   Intégrité de l'app → Signature, copie les empreintes SHA-1 et SHA-256 de la
+   « clé de signature de l'app » et ajoute-les dans Firebase (comme à l'étape 3
+   de la configuration Firebase) : sans elles, la connexion Google échoue dans
+   la version du Play Store.
+6. **Produits** (Monétiser avec Play), avec exactement ces identifiants :
+   - abonnement `buteo_pro`, forfaits de base `mensuel` (1 mois, 2 900 FCFA),
+     `trimestriel` (3 mois, 7 500 FCFA), `semestriel` (6 mois, 13 900 FCFA) ;
+   - abonnement `buteo_elite`, mêmes forfaits (6 900, 17 900 et 32 900 FCFA) ;
+   - produit intégré `coupon_vip` (500 FCFA).
+
+   Forfaits en renouvellement automatique, sans essai gratuit. L'app affiche
+   le prix local fixé par Google Play.
+7. **Laisser le serveur vérifier les achats** :
+   - Google Cloud → API et services → Bibliothèque → active **Google Play
+     Android Developer API** ;
+   - Play Console → Utilisateurs et autorisations → Inviter un utilisateur →
+     `NUMÉRO-compute@developer.gserviceaccount.com` (le numéro du projet est
+     dans les paramètres du projet Firebase), avec pour l'app Buteo les droits
+     « Afficher les données financières » et « Gérer les commandes et les
+     abonnements ». Google met parfois 24 heures à appliquer ces droits.
+8. **AdMob** : crée un compte sur [admob.google.com](https://admob.google.com),
+   ajoute l'app Android « Buteo », puis un bloc d'annonces **Bannière**.
+   Envoie-moi l'identifiant de l'app (`ca-app-pub-…~…`) et celui du bloc
+   (`ca-app-pub-…/…`) : ils sont publics, je les mets dans le code. Dans
+   Confidentialité et messages, crée le message RGPD (pour les visiteurs
+   européens). Ne clique jamais sur tes propres annonces. Google limite la
+   publicité sur les contenus liés aux paris : attends-toi à un revenu
+   publicitaire modeste, les abonnements restent la source principale.
+
+Pour tester un achat sans payer : Play Console → Paramètres → Test de licence,
+ajoute ton adresse Gmail, puis installe l'app depuis le lien du test interne.
+
 ## Paiements
 
 Google Play impose son propre système de paiement pour les abonnements et les
@@ -134,11 +213,18 @@ tard pour septembre 2027.
 
 Plan retenu :
 - **Dans l'app** : Google Play Billing (abonnements Pro et Élite, coupons).
-- **Sur le site web de Buteo** : Mobile Money (via un agrégateur comme
-  CinetPay ou FedaPay) et crypto. L'achat est rattaché au compte, et l'app
-  débloque l'accès automatiquement à la connexion.
+- **Sur le site web de Buteo** : Mobile Money et crypto. L'achat est
+  rattaché au compte, et l'app débloque l'accès automatiquement à la
+  connexion. Google interdit de mentionner ces moyens de paiement dans l'app.
 - Dès que Google l'autorise dans un pays, ajout du lien vers le paiement
   externe directement dans l'app.
+
+Prestataires pour un vendeur particulier au Gabon (à confirmer avec eux) :
+- **FedaPay** ne liste pas le Gabon (Bénin, Côte d'Ivoire, Niger, Sénégal,
+  Togo, Mali, Burkina Faso, Guinée).
+- **Mobile Money au Gabon** : pawaPay (Airtel Money), ou les agrégateurs
+  gabonais E-Billing, SingPay et PViT (Airtel Money et Moov Money).
+- **Crypto** : NOWPayments (sans garde des fonds, frais d'environ 0,5 %).
 
 ## Maquette
 

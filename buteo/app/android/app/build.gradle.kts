@@ -33,6 +33,9 @@ android {
 
     // Clé de TEST, publique : elle permet seulement d'installer les versions de test
     // les unes par-dessus les autres. La clé du Play Store sera différente et secrète.
+    // Clé d'envoi Play Store : fournie par GitHub Actions (secrets), jamais dans le dépôt.
+    val uploadKeystore = System.getenv("BUTEO_UPLOAD_KEYSTORE")
+
     signingConfigs {
         create("test") {
             storeFile = file("../keystores/buteo-test.keystore")
@@ -40,11 +43,19 @@ android {
             keyAlias = "buteo-test"
             keyPassword = "buteo-test"
         }
+        if (uploadKeystore != null) {
+            create("upload") {
+                storeFile = file(uploadKeystore)
+                storePassword = System.getenv("BUTEO_UPLOAD_STORE_PASSWORD")
+                keyAlias = System.getenv("BUTEO_UPLOAD_KEY_ALIAS")
+                keyPassword = System.getenv("BUTEO_UPLOAD_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
-            signingConfig = signingConfigs.getByName("test")
+            signingConfig = signingConfigs.findByName("upload") ?: signingConfigs.getByName("test")
         }
     }
 }

@@ -37,6 +37,10 @@
                 <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
             </intent-filter>
         </receiver>
+        <!-- AdMob : identifiant de TEST de Google, à remplacer par celui de Buteo avant la publication. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713" />
         <!-- Icône et couleur des notifications envoyées par Firebase. -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"

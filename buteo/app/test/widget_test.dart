@@ -171,19 +171,70 @@ void main() {
     await scrollAndTap(tester, find.text('Combiné cote 10+'));
     expect(find.text('Rubrique Pro'), findsOneWidget);
 
-    // L'achat simulé ne débloque rien avec les vraies données.
+    // Sans compte, l'achat demande d'abord de se connecter (il sera rattaché au compte).
     await tester.tap(find.textContaining('Débloquer ce coupon'));
     await settle(tester);
     await tester.tap(find.textContaining('Payer'));
     await settle(tester);
+    expect(find.textContaining('Connecte-toi d’abord'), findsOneWidget);
+    expect(find.text('Continuer avec Google'), findsOneWidget);
+    await tester.tapAt(const Offset(180, 80)); // ferme la fenêtre de connexion
+    await settle(tester);
     expect(find.text('Rubrique Pro'), findsOneWidget);
-    expect(find.textContaining('paiement'), findsOneWidget);
 
     await tester.pageBack();
     await settle(tester);
     await tester.tap(find.text('Profil').last);
     await settle(tester);
     expect(find.text('Mode démo'.toUpperCase()), findsNothing);
+    repo.dispose();
+  });
+
+  testWidgets('vraies données : un coupon acheté sur Google Play débloque la rubrique', (tester) async {
+    final repo = FirestoreTipsRepository(db: FakeFirebaseFirestore(), clock: () => _now);
+    SharedPreferences.setMockInitialValues({});
+    final billing = FakeBillingService(today: dateKey(dayOf(_now)));
+    final state = AppState(
+      await SharedPreferences.getInstance(),
+      auth: FakeAuthService(),
+      demoMode: false,
+      billing: billing,
+    );
+    await state.start();
+    await startApp(tester, state: state, repository: repo);
+    await state.signInWithGoogle();
+    await settle(tester);
+
+    await scrollAndTap(tester, find.text('Score exact'));
+    expect(find.text('Rubrique Élite'), findsOneWidget);
+    await tester.tap(find.textContaining('Débloquer ce coupon'));
+    await settle(tester);
+    expect(find.text('Payer 500 FCFA'), findsOneWidget); // prix affiché par Google Play
+    await tester.tap(find.text('Payer 500 FCFA'));
+    await settle(tester);
+
+    expect(billing.bought, ['coupon_vip:score']);
+    expect(find.text('Rubrique Élite'), findsNothing);
+    expect(find.text('Coupon débloqué pour aujourd’hui'), findsOneWidget);
+    repo.dispose();
+  });
+
+  testWidgets('vraies données : sans Google Play, le paiement explique où installer l’app', (tester) async {
+    final repo = FirestoreTipsRepository(db: FakeFirebaseFirestore(), clock: () => _now);
+    SharedPreferences.setMockInitialValues({});
+    final state = AppState(await SharedPreferences.getInstance(), auth: FakeAuthService(), demoMode: false);
+    await state.start();
+    await startApp(tester, state: state, repository: repo);
+    await state.signInWithGoogle();
+    await settle(tester);
+
+    await tester.tap(find.text('Offres').last);
+    await settle(tester);
+    await scrollAndTap(tester, find.text('Choisir Pro'));
+    await tester.tap(find.text("S'abonner"));
+    await settle(tester);
+    expect(find.textContaining('installe Buteo depuis le Play Store'), findsOneWidget);
+    expect(state.tier.name, 'free');
     repo.dispose();
   });
 }

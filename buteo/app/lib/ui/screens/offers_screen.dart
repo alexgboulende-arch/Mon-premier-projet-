@@ -73,10 +73,24 @@ class OffersScreen extends StatelessWidget {
           size: 12,
         ),
         const SizedBox(height: 6),
-        Text(
-          'Simulation : aucun paiement réel dans cette version.',
-          style: TextStyle(fontSize: 12, color: c.goldText, fontWeight: FontWeight.w600),
-        ),
+        if (state.demoMode)
+          Text(
+            'Simulation : aucun paiement réel en démonstration.',
+            style: TextStyle(fontSize: 12, color: c.goldText, fontWeight: FontWeight.w600),
+          )
+        else if (state.signedIn && state.billing.available)
+          Center(
+            child: TextButton(
+              onPressed: () {
+                state.restorePurchases();
+                showToast(context, 'Recherche de tes achats Google Play…');
+              },
+              child: Text(
+                'Restaurer mes achats',
+                style: TextStyle(color: c.muted, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
       ],
     );
   }

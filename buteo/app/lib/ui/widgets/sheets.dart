@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import '../../data/catalog.dart';
 import '../../data/models.dart';
 import '../../data/tips_repository.dart';
+import '../../services/billing_service.dart';
 import '../../state/app_state.dart';
 import '../../theme/theme.dart';
 import '../../util/format.dart';
+import '../screens/login.dart';
 import 'common.dart';
 
 /// Fenêtre du bas d'écran, défilante si le contenu est long.
@@ -38,10 +40,13 @@ class _SheetTitle extends StatelessWidget {
 }
 
 class _PayBox extends StatelessWidget {
-  const _PayBox({required this.caption, required this.price});
+  const _PayBox({required this.caption, required this.price, this.playKey});
 
   final String caption;
   final Price price;
+
+  /// Produit Google Play : son prix local remplace le prix indicatif s'il est connu.
+  final String? playKey;
 
   @override
   Widget build(BuildContext context) {
@@ -60,7 +65,7 @@ class _PayBox extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 MutedText(caption),
-                Text(fcfa(price.fcfa), style: numStyle(28)),
+                Text(AppScope.of(context).playPrices[playKey] ?? fcfa(price.fcfa), style: numStyle(28)),
               ],
             ),
           ),
@@ -83,19 +88,19 @@ Future<void> showUnlockSheet(BuildContext context, Rubric rubric) {
         "Accès à tous les pronos de cette rubrique pour aujourd'hui, ${longDate(today).toLowerCase()}.",
         size: 13.5,
       ),
-      const _PayBox(caption: 'Coupon du jour', price: couponPrice),
+      const _PayBox(caption: 'Coupon du jour', price: couponPrice, playKey: PlayProducts.coupon),
       WideButton(
-        'Payer ${fcfa(couponPrice.fcfa)}',
+        'Payer ${state.playPrices[PlayProducts.coupon] ?? fcfa(couponPrice.fcfa)}',
         tone: ButtonTone.gold,
         onPressed: () {
-          if (!AppScope.repo(context).isDemo) return _paymentSoon(context, sheet);
+          if (!state.demoMode) return _payWithPlay(context, sheet, () => state.buyCoupon(rubric));
           state.unlock(rubric, today);
           Navigator.pop(sheet);
           showToast(context, "« ${rubric.name} » débloqué pour aujourd'hui");
         },
       ),
       WideButton('Annuler', tone: ButtonTone.ghost, onPressed: () => Navigator.pop(sheet)),
-      const MutedText('Simulation : aucun paiement réel dans cette version.', size: 12),
+      MutedText(_paymentNote(state), size: 12),
     ],
   );
 }
@@ -110,21 +115,26 @@ Future<void> showPlanSheet(BuildContext context, Plan plan) {
     (sheet) => [
       _SheetTitle('Passer ${plan.tier.label} · $months mois'),
       for (final p in plan.perks) Note(p),
-      _PayBox(caption: 'Total', price: price),
+      _PayBox(
+        caption: 'Total',
+        price: price,
+        playKey: '${PlayProducts.subscriptionFor(plan.tier)}/${PlayProducts.basePlans[months]}',
+      ),
       WideButton(
         "S'abonner",
         tone: plan.tier == Tier.pro ? ButtonTone.gold : ButtonTone.green,
         onPressed: () {
-          if (!AppScope.repo(context).isDemo) return _paymentSoon(context, sheet);
+          if (!state.demoMode) {
+            return _payWithPlay(context, sheet, () => state.buySubscription(plan.tier, months));
+          }
           state.setTier(plan.tier);
           Navigator.pop(sheet);
           showToast(context, 'Bienvenue dans la formule ${plan.tier.label}');
         },
       ),
       WideButton('Annuler', tone: ButtonTone.ghost, onPressed: () => Navigator.pop(sheet)),
-      const MutedText(
-        'Renouvellement automatique, annulable à tout moment dans Google Play. '
-        'Simulation : aucun paiement réel dans cette version.',
+      MutedText(
+        'Renouvellement automatique, annulable à tout moment dans Google Play. ${_paymentNote(state)}',
         size: 12,
       ),
     ],
@@ -203,8 +213,22 @@ class _NotifRow extends StatelessWidget {
   }
 }
 
-/// Avec les vraies données, l'achat simulé ne débloque rien : le paiement arrive à l'étape 4.
-void _paymentSoon(BuildContext context, BuildContext sheet) {
+String _paymentNote(AppState state) =>
+    state.demoMode ? 'Simulation : aucun paiement réel en démonstration.' : 'Paiement sécurisé par Google Play.';
+
+/// Achat réel : il faut un compte (l'achat y est rattaché) et Google Play.
+/// Google interdit de proposer un autre moyen de paiement dans l'app.
+void _payWithPlay(BuildContext context, BuildContext sheet, Future<void> Function() buy) {
+  final state = AppScope.read(context);
   Navigator.pop(sheet);
-  showToast(context, 'Le paiement (Google Play, Mobile Money, crypto) arrive très bientôt.');
+  if (!state.signedIn) {
+    showToast(context, 'Connecte-toi d’abord : ton achat sera rattaché à ton compte.');
+    showLoginSheet(context);
+    return;
+  }
+  if (!state.billing.available) {
+    showToast(context, 'Le paiement passe par Google Play : installe Buteo depuis le Play Store.');
+    return;
+  }
+  buy();
 }

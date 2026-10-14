@@ -176,6 +176,7 @@ void main() {
     test('la formule et les coupons viennent du profil écrit par le serveur', () async {
       final state = await makeState({
         'tier': 'pro',
+        'tierUntil': DateTime.now().toUtc().add(const Duration(days: 30)),
         'coupons': ['2026-10-14|score'],
       });
       var accessChanges = 0;

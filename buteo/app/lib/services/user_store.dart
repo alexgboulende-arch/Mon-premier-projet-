@@ -32,7 +32,10 @@ class FirestoreUserStore implements UserStore {
   final _users = FirebaseFirestore.instance.collection('users');
 
   @override
-  Future<Map<String, dynamic>?> load(String uid) async => (await _users.doc(uid).get()).data();
+  Future<Map<String, dynamic>?> load(String uid) async {
+    final data = (await _users.doc(uid).get()).data();
+    return data?.map((k, v) => MapEntry(k, v is Timestamp ? v.toDate().toUtc() : v));
+  }
 
   @override
   Future<void> save(String uid, Map<String, dynamic> data) =>

@@ -121,4 +121,53 @@ void main() {
       throwsA(isA<AuthFailure>().having((e) => e.message, 'message', notConfiguredMessage)),
     );
   });
+
+  group('achats Google Play (vraies données)', () {
+    Future<(AppState, FakeBillingService)> realState() async {
+      SharedPreferences.setMockInitialValues({});
+      final billing = FakeBillingService();
+      final state = AppState(await SharedPreferences.getInstance(), demoMode: false, billing: billing);
+      await state.start();
+      return (state, billing);
+    }
+
+    test('un abonnement confirmé donne la formule et prévient l’utilisateur', () async {
+      final (state, billing) = await realState();
+      final messages = <String>[];
+      state.notices.listen(messages.add);
+      var refreshed = 0;
+      state.onAccessChanged = () => refreshed++;
+
+      await state.buySubscription(Tier.elite, 3);
+      await flush();
+      expect(billing.bought, ['buteo_elite/trimestriel']);
+      expect(state.tier, Tier.elite);
+      expect(refreshed, 1);
+      expect(messages, ['Bienvenue dans la formule Élite']);
+    });
+
+    test('une formule échue ne compte plus', () async {
+      final (state, _) = await realState();
+      state.serverTier = Tier.pro;
+      state.serverTierUntil = DateTime.now().toUtc().subtract(const Duration(minutes: 1));
+      expect(state.tier, Tier.free);
+      state.serverTierUntil = DateTime.now().toUtc().add(const Duration(days: 1));
+      expect(state.tier, Tier.pro);
+    });
+
+    test('paiement en attente : un message, aucun accès', () async {
+      final (state, billing) = await realState();
+      final messages = <String>[];
+      state.notices.listen(messages.add);
+      billing.pending();
+      await flush();
+      expect(messages.single, contains('en attente'));
+      expect(state.tier, Tier.free);
+    });
+
+    test('les prix locaux de Google Play sont chargés au démarrage', () async {
+      final (state, _) = await realState();
+      expect(state.playPrices['coupon_vip'], '500 FCFA');
+    });
+  });
 }

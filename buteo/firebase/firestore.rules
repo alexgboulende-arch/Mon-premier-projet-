@@ -7,7 +7,7 @@ service cloud.firestore {
 
     // Champs écrits uniquement par le serveur (formule, achats) : l'app ne peut pas les modifier.
     function serverFields() {
-      return ['tier', 'entitlements', 'coupons', 'purchases'];
+      return ['tier', 'tierUntil', 'subscription', 'entitlements', 'coupons', 'purchases'];
     }
 
     function isOwner(uid) {
@@ -49,12 +49,14 @@ service cloud.firestore {
       return /databases/$(database)/documents/users/$(request.auth.uid);
     }
 
-    // Formule et coupons sont écrits par le serveur dans le profil (étape 4).
+    // Formule (jusqu'à son échéance) et coupons sont écrits par le serveur
+    // après vérification du paiement (functions/src/purchases.ts).
     function entitled(tier, date, rubric) {
       let profile = get(profilePath()).data;
+      let active = profile.get('tierUntil', timestamp.value(0)) > request.time;
       return exists(profilePath()) && (
-        (tier == 'pro' && profile.get('tier', 'free') in ['pro', 'elite'])
-        || (tier == 'elite' && profile.get('tier', 'free') == 'elite')
+        (tier == 'pro' && active && profile.get('tier', 'free') in ['pro', 'elite'])
+        || (tier == 'elite' && active && profile.get('tier', 'free') == 'elite')
         || (date + '|' + rubric) in profile.get('coupons', [])
       );
     }

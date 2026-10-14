@@ -22,6 +22,8 @@ jobs:
   apk:
     name: Construire l'APK
     runs-on: ubuntu-latest
+    env:
+      CLE_PLAY_STORE: ${{ secrets.ANDROID_UPLOAD_KEYSTORE != '' }}
     defaults:
       run:
         working-directory: buteo/app
@@ -58,6 +60,26 @@ jobs:
         with:
           name: buteo-apk
           path: buteo/app/build/buteo-test.apk
+
+      # Paquet pour le Play Store, signé avec la clé d'envoi secrète (si elle est configurée).
+      - name: Paquet Play Store (.aab)
+        if: env.CLE_PLAY_STORE == 'true'
+        env:
+          ANDROID_UPLOAD_KEYSTORE: ${{ secrets.ANDROID_UPLOAD_KEYSTORE }}
+          BUTEO_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_PASSWORD }}
+          BUTEO_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_PASSWORD }}
+          BUTEO_UPLOAD_KEY_ALIAS: upload
+        run: |
+          echo "$ANDROID_UPLOAD_KEYSTORE" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          BUTEO_UPLOAD_KEYSTORE="$RUNNER_TEMP/upload.jks" flutter build appbundle --release
+          rm "$RUNNER_TEMP/upload.jks"
+
+      - name: Garder le paquet Play Store
+        if: env.CLE_PLAY_STORE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: buteo-play-store
+          path: buteo/app/build/app/outputs/bundle/release/app-release.aab
 
       - name: Placer l'étiquette « buteo-test » sur ce commit
         run: |
