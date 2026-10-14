@@ -66,6 +66,9 @@ Commandes utiles (dans `app/`) : `flutter test`, `flutter analyze`,
 
 ## Configurer Firebase (à faire une fois)
 
+**Fait** : projet `buteo-bbec5`, configuration dans
+`app/lib/services/firebase_config.dart`. Les étapes restent ci-dessous pour mémoire.
+
 Sans cette configuration, l'app marche en mode local : favoris et alertes
 restent sur le téléphone, et la connexion affiche un message d'attente.
 Tout se fait depuis le navigateur du téléphone, sur
