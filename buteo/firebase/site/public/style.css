@@ -1,0 +1,119 @@
+:root {
+  --bg: #0A1230;
+  --surface: #111A3D;
+  --surface2: #18234F;
+  --line: #243163;
+  --fg: #EEF1FB;
+  --muted: #8F9AC4;
+  --win: #2BF59A;
+  --win-ink: #04261A;
+  --gold: #FFC53D;
+  --gold-ink: #2B1D00;
+  --loss: #FF7389;
+  --radius: 16px;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+html, body { margin: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font: 15px/1.5 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  min-height: 100vh;
+}
+
+main, .top, footer { max-width: 520px; margin: 0 auto; padding: 0 16px; }
+
+.top { display: flex; align-items: center; justify-content: space-between; padding-top: 18px; padding-bottom: 8px; }
+.logo { height: 40px; width: auto; }
+.secure { color: var(--muted); font-size: 12px; }
+
+h1 { font-size: 22px; margin: 0 0 6px; }
+h2 { font-size: 19px; margin: 18px 0 10px; }
+h3 { font-size: 18px; margin: 0; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  margin: 14px 0;
+}
+
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.center { text-align: center; }
+.error { color: var(--loss); min-height: 1.2em; margin: 10px 0 0; }
+.status { margin: 6px 0 0; font-weight: 600; }
+
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; min-height: 48px; margin-top: 14px;
+  border: 0; border-radius: 12px; cursor: pointer;
+  font: 600 15px Inter, system-ui, sans-serif;
+}
+.btn:disabled { opacity: .55; cursor: default; }
+.btn-light { background: #fff; color: #1f1f1f; }
+.btn-win { background: var(--win); color: var(--win-ink); }
+.btn-gold { background: var(--gold); color: var(--gold-ink); }
+.btn-ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+
+.link { background: none; border: 0; padding: 0; color: var(--win); font: inherit; cursor: pointer; text-decoration: underline; }
+
+.offer-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tag { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 99px; }
+.tag-gold { background: rgba(255, 197, 61, .14); color: var(--gold); }
+.tag-win { background: rgba(43, 245, 154, .12); color: var(--win); }
+.price-inline { font: 700 22px "Barlow Condensed", sans-serif; color: var(--gold); }
+
+.perks { margin: 12px 0 0; padding-left: 20px; color: var(--muted); }
+.perks li { margin: 3px 0; }
+
+.durations { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+.duration {
+  background: var(--surface2); border: 1px solid var(--line); border-radius: 12px;
+  color: var(--fg); padding: 8px 4px; cursor: pointer; text-align: center;
+  font: 500 12px Inter, system-ui, sans-serif;
+}
+.duration strong { display: block; font: 700 20px "Barlow Condensed", sans-serif; }
+.duration[aria-checked="true"] { border-color: var(--win); background: rgba(43, 245, 154, .08); }
+
+.field { display: block; margin-top: 14px; }
+.field span { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
+.field input, .field select {
+  width: 100%; min-height: 46px; padding: 0 12px;
+  background: var(--surface2); color: var(--fg);
+  border: 1px solid var(--line); border-radius: 12px;
+  font: 16px Inter, system-ui, sans-serif;
+}
+
+.methods { display: grid; gap: 10px; }
+.method {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface2); border: 1px solid var(--line); border-radius: 12px;
+  padding: 12px; cursor: pointer;
+}
+.method:has(input:checked:not(:disabled)) { border-color: var(--win); }
+.method.off { opacity: .5; cursor: default; }
+.method input { accent-color: var(--win); width: 18px; height: 18px; }
+.method small { display: block; color: var(--muted); font-size: 12px; }
+
+.spinner {
+  width: 42px; height: 42px; margin: 6px auto 0;
+  border: 4px solid var(--line); border-top-color: var(--win); border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+
+.check {
+  width: 54px; height: 54px; margin: 4px auto 0; border-radius: 50%;
+  background: var(--win); color: var(--win-ink);
+  display: grid; place-items: center; font-size: 30px; font-weight: 700;
+}
+
+footer { padding-top: 10px; padding-bottom: 28px; }
+footer p { margin: 6px 0; }

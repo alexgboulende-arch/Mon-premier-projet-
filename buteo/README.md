@@ -1,8 +1,9 @@
 # Buteo — Pronostics sportifs
 
 Application mobile de pronostics sportifs inspirée de *Multi Betting Tips*, en
-version améliorée. **Statut : étape 4 sur 5 (paiements et publicité), en attente de ta
-configuration Firebase, Google Play et AdMob pour passer en réel.**
+version améliorée. **Statut : étape 4 sur 5 (paiements et publicité). Le moteur publie
+de vrais pronos chaque nuit ; le site de paiement attend les comptes E-Billing et
+NOWPayments, et l'app ses comptes Google Play et AdMob.**
 
 ## Décisions prises
 
@@ -40,7 +41,7 @@ Organisation du code :
 | `lib/ui/screens/` | Accueil, rubrique, live, stats, offres, profil, démarrage |
 | `lib/ui/widgets/` | Carte de prono, tuiles, badges, fenêtres d'achat |
 | `test/` | Tests automatiques (générateur, états des matchs, compte, écrans) |
-| `../firebase/` | Règles de sécurité de la base Firestore, fonctions serveur (vérification des achats) et leurs tests |
+| `../firebase/` | Règles de sécurité de la base Firestore, fonctions serveur (vérification des achats), site de paiement (`site/`) et leurs tests |
 | `../engine/` | Moteur de pronostics en Python (voir son README) |
 
 Commandes utiles (dans `app/`) : `flutter test`, `flutter analyze`,
@@ -59,8 +60,9 @@ Commandes utiles (dans `app/`) : `flutter test`, `flutter analyze`,
    données de démonstration aux vrais pronos dès la première publication.
 4. **Paiements et publicité** (partie Google Play faite, à activer avec tes
    comptes) : abonnements et coupons Google Play vérifiés par le serveur,
-   bannière AdMob dans la version gratuite. Reste le site web pour Mobile Money
-   et crypto, une fois le prestataire choisi.
+   bannière AdMob dans la version gratuite. Site de paiement (étape 4b, fait,
+   à activer avec les comptes E-Billing et NOWPayments) : Mobile Money et
+   crypto, accès débloqué dans l'app dès le paiement vérifié.
 5. **Communauté et publication** : concours, journal de paris, back-office,
    test fermé puis mise en ligne sur le Play Store.
 
@@ -147,11 +149,12 @@ Les étapes 1 et 2 se font une fois Firebase configuré (voir plus haut).
    `FIREBASE_SERVICE_ACCOUNT` de l'étape 3 :
    - Google Cloud ([console.cloud.google.com](https://console.cloud.google.com),
      même projet) → IAM et administration → IAM → ligne
-     `firebase-adminsdk-…` → crayon → « Ajouter un autre rôle », sept fois :
+     `firebase-adminsdk-…` → crayon → « Ajouter un autre rôle », huit fois :
      *Administrateur Cloud Functions*, *Utilisateur du compte de service*,
      *Administrateur Cloud Run*, *Administrateur Cloud Scheduler*,
      *Administrateur Artifact Registry*, *Administrateur Firebase Rules*,
-     *Administrateur Service Usage*. Enregistrer.
+     *Administrateur Service Usage*, *Administrateur Firebase Hosting*
+     (pour le site de paiement). Enregistrer.
    - GitHub → Actions → « Buteo – déploiement Firebase » → Run workflow →
      `tout`. (Ce bouton n'apparaît qu'une fois le code fusionné dans `main`.)
      Si une ligne rouge parle de permission, envoie-la-moi.
@@ -209,6 +212,44 @@ Les étapes 1 et 2 se font une fois Firebase configuré (voir plus haut).
 Pour tester un achat sans payer : Play Console → Paramètres → Test de licence,
 ajoute ton adresse Gmail, puis installe l'app depuis le lien du test interne.
 
+## Site de paiement : Mobile Money et crypto (étape 4b)
+
+Le site (`firebase/site/`) est publié par Firebase Hosting à l'adresse
+**https://buteo-bbec5.web.app**. Le client s'y connecte avec le même compte
+Google que dans l'app, choisit une formule (1, 3 ou 6 mois, payée une fois,
+sans renouvellement automatique) ou un coupon du jour, puis paie :
+
+- **Mobile Money** (Airtel Money, Moov Money) par **E-Billing** : le client
+  est envoyé sur la page de paiement d'E-Billing, puis revient sur le site ;
+- **crypto** par **NOWPayments**, pour les formules seulement (le coupon à
+  500 FCFA est sous les montants minimaux des cryptomonnaies).
+
+Le serveur (`functions/src/orders.ts`) crée la commande, puis **vérifie le
+paiement auprès du prestataire** avant d'écrire l'accès dans le profil (mêmes
+champs que les achats Google Play). L'app relit l'accès dès qu'on y revient.
+Google interdit de mentionner ce site dans l'app : fais-le connaître ailleurs
+(WhatsApp, réseaux sociaux).
+
+Mise en route (forfait Blaze et rôles du compte de service comme à l'étape 4) :
+
+1. **E-Billing** : ouvre un compte marchand de test auprès de Digitech Africa,
+   puis ajoute les secrets GitHub `EBILLING_USERNAME` et `EBILLING_SHARED_KEY`
+   (profil marchand). Les adresses de test sont utilisées par défaut. Pour la
+   production, ajoute dans GitHub les **variables** (Settings → Secrets and
+   variables → Actions → onglet *Variables*) `EBILLING_API_URL` et
+   `EBILLING_PORTAL_URL` avec les adresses données par E-Billing. Adresse de
+   notification à déclarer dans le profil marchand :
+   `https://europe-west1-buteo-bbec5.cloudfunctions.net/notificationPaiement/ebilling`.
+   Les adresses et noms de champs ont été repris d'intégrations existantes :
+   à vérifier avec la documentation qu'E-Billing te remettra.
+2. **NOWPayments** : compte sur [nowpayments.io](https://nowpayments.io),
+   portefeuille de réception, puis une clé API et un « IPN secret » (Store
+   settings). Secrets GitHub : `NOWPAYMENTS_API_KEY` et `NOWPAYMENTS_IPN_SECRET`.
+3. Actions → « Buteo – déploiement Firebase » → Run workflow → `tout`.
+
+Un moyen de paiement sans clés s'affiche « bientôt disponible ». **PViT** sera
+branché de la même façon dès réception de sa documentation.
+
 ## Paiements
 
 Google Play impose son propre système de paiement pour les abonnements et les
@@ -225,7 +266,8 @@ Plan retenu :
 - Dès que Google l'autorise dans un pays, ajout du lien vers le paiement
   externe directement dans l'app.
 
-Prestataires pour un vendeur particulier au Gabon (à confirmer avec eux) :
+Prestataires étudiés pour un vendeur particulier au Gabon (retenus : E-Billing,
+PViT ensuite, et NOWPayments pour la crypto) :
 - **FedaPay** ne liste pas le Gabon (Bénin, Côte d'Ivoire, Niger, Sénégal,
   Togo, Mali, Burkina Faso, Guinée).
 - **Mobile Money au Gabon** : pawaPay (Airtel Money), ou les agrégateurs

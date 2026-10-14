@@ -64,7 +64,7 @@ export interface Entitlement {
 
 export class PurchaseError extends Error {
   constructor(
-    readonly code: "invalid-argument" | "permission-denied" | "failed-precondition",
+    readonly code: "invalid-argument" | "permission-denied" | "failed-precondition" | "not-found" | "unavailable",
     message: string,
   ) {
     super(message);
@@ -180,16 +180,18 @@ export async function refreshSubscriptions(db: Firestore, play: PlayApi, now: Da
   for (const user of snap.docs) {
     const update: Record<string, unknown> = {};
     const subscription = user.get("subscription");
+    const current = user.get("tierUntil") instanceof Timestamp ? (user.get("tierUntil") as Timestamp).toDate() : null;
     if (user.get("tier") !== "free" && typeof subscription === "string") {
       const purchase = await db.doc(`purchases/${subscription}`).get();
       const token = purchase.get("token");
       if (typeof token === "string") {
         const info = await play.subscription(token);
         if (ACTIVE_STATES.has(info.state) && info.expiry && info.expiry > now) {
-          update.tierUntil = Timestamp.fromDate(info.expiry);
-          await purchase.ref.set({ state: info.state, expiry: update.tierUntil }, { merge: true });
+          // Une formule payée sur le site peut aller plus loin : on ne raccourcit jamais.
+          if (!current || info.expiry > current) update.tierUntil = Timestamp.fromDate(info.expiry);
+          await purchase.ref.set({ state: info.state, expiry: Timestamp.fromDate(info.expiry) }, { merge: true });
         } else if (!info.expiry || info.expiry <= now) {
-          update.tier = "free";
+          if (!current || current <= now) update.tier = "free";
           await purchase.ref.set({ state: info.state }, { merge: true });
         }
       }

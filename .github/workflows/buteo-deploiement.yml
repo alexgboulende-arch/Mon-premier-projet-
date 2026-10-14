@@ -1,6 +1,8 @@
 name: Buteo – déploiement Firebase
 
-# Publie les règles de sécurité Firestore et les fonctions serveur (achats).
+# Publie les règles de sécurité Firestore, les fonctions serveur (achats) et le
+# site de paiement (Firebase Hosting). Les clés des prestataires de paiement
+# (secrets GitHub facultatifs) sont passées aux fonctions au moment du déploiement.
 # À lancer à la main : Actions → « Buteo – déploiement Firebase » → Run workflow.
 # Le compte de service du secret FIREBASE_SERVICE_ACCOUNT doit avoir les rôles
 # listés dans le README de Buteo (« Activer les paiements et la publicité »).
@@ -10,7 +12,7 @@ on:
       cible:
         description: Ce qu'il faut publier
         type: choice
-        options: [tout, regles, fonctions]
+        options: [tout, regles, fonctions, site]
         default: tout
 
 concurrency:
@@ -36,22 +38,37 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm install --no-audit --no-fund
         working-directory: buteo/firebase/functions
+      - run: npm install --no-audit --no-fund
+        working-directory: buteo/firebase/site
       - name: Publier
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           CIBLE: ${{ inputs.cible }}
+          NOWPAYMENTS_API_KEY: ${{ secrets.NOWPAYMENTS_API_KEY }}
+          NOWPAYMENTS_IPN_SECRET: ${{ secrets.NOWPAYMENTS_IPN_SECRET }}
+          EBILLING_USERNAME: ${{ secrets.EBILLING_USERNAME }}
+          EBILLING_SHARED_KEY: ${{ secrets.EBILLING_SHARED_KEY }}
+          EBILLING_API_URL: ${{ vars.EBILLING_API_URL }}
+          EBILLING_PORTAL_URL: ${{ vars.EBILLING_PORTAL_URL }}
         run: |
           if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
             echo "::error::Secret FIREBASE_SERVICE_ACCOUNT manquant (voir le README de Buteo)."
             exit 1
           fi
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/compte-de-service.json"
-          trap 'rm -f "$GOOGLE_APPLICATION_CREDENTIALS"' EXIT
           printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$GOOGLE_APPLICATION_CREDENTIALS"
           PROJET=$(jq -r .project_id "$GOOGLE_APPLICATION_CREDENTIALS")
+          # Clés des prestataires de paiement : seules celles qui sont configurées.
+          ENV_FONCTIONS="functions/.env.$PROJET"
+          trap 'rm -f "$GOOGLE_APPLICATION_CREDENTIALS" "$ENV_FONCTIONS"' EXIT
+          : > "$ENV_FONCTIONS"
+          for VAR in NOWPAYMENTS_API_KEY NOWPAYMENTS_IPN_SECRET EBILLING_USERNAME EBILLING_SHARED_KEY EBILLING_API_URL EBILLING_PORTAL_URL; do
+            if [ -n "${!VAR}" ]; then printf '%s=%s\n' "$VAR" "${!VAR}" >> "$ENV_FONCTIONS"; fi
+          done
           case "$CIBLE" in
             regles) SEULEMENT=firestore:rules ;;
             fonctions) SEULEMENT=functions ;;
-            *) SEULEMENT=firestore:rules,functions ;;
+            site) SEULEMENT=hosting ;;
+            *) SEULEMENT=firestore:rules,functions,hosting ;;
           esac
           npx firebase deploy --only "$SEULEMENT" --project "$PROJET" --non-interactive --force
