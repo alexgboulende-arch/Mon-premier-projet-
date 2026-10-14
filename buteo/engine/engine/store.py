@@ -56,7 +56,7 @@ class FirestoreStore:
         if not raw:
             raise RuntimeError("Variable FIREBASE_SERVICE_ACCOUNT manquante.")
         if not firebase_admin._apps:
-            firebase_admin.initialize_app(credentials.Certificate(json.loads(raw)))
+            firebase_admin.initialize_app(credentials.Certificate(service_account(raw)))
         self._db = firestore.client()
 
     def get(self, path: str) -> dict | None:
@@ -68,6 +68,27 @@ class FirestoreStore:
 
     def query_picks(self, date: str) -> dict[str, dict]:
         return {snap.id: snap.to_dict() for snap in self._db.collection("picks").where("date", "==", date).stream()}
+
+
+class BadServiceAccount(RuntimeError):
+    pass
+
+
+def service_account(raw: str) -> dict:
+    """Clé du compte de service, avec un message clair si le secret contient autre chose."""
+    hint = (
+        "Le secret FIREBASE_SERVICE_ACCOUNT doit contenir la clé privée du compte de service "
+        "(console Firebase → Paramètres du projet → Comptes de service → Générer une nouvelle clé privée), "
+        'un texte qui commence par {"type": "service_account". '
+    )
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        raise BadServiceAccount(hint + "Le texte collé n'est pas un fichier JSON complet.") from None
+    if not isinstance(data, dict) or data.get("type") != "service_account":
+        found = " C'est le fichier google-services.json de l'app." if isinstance(data, dict) and "project_info" in data else ""
+        raise BadServiceAccount(hint + "Le texte collé est un autre fichier." + found)
+    return data
 
 
 def iso(dt: datetime) -> str:

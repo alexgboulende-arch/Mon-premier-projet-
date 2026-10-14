@@ -37,8 +37,11 @@ identifiants), il passe en mode économique :
   moins de 50 matchs connus, ou une équipe moins de 6, le modèle pèse moins
   et les pronos reposent surtout sur les cotes des bookmakers.
 - **Cotes** : demandées match par match, dans l'ordre de la liste des
-  championnats, jusqu'au quota du jour (3 requêtes gardées en réserve).
+  championnats, jusqu'au quota du jour. Il reste toujours de quoi suivre les
+  résultats jusqu'à minuit (heure où le quota repart).
 - **Résultats** : tous les matchs du jour en une requête, toutes les 20 minutes.
+- **Rythme** : 10 requêtes par minute au plus (une toutes les 6,5 secondes) ;
+  une publication prend donc une dizaine de minutes.
 - Un refus de l'API (quota atteint, date hors de l'offre) est signalé dans
   le journal sans faire échouer la tâche.
 

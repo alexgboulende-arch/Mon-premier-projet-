@@ -118,7 +118,8 @@ jobs:
     name: Pronos et résultats
     if: github.event_name != 'push'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Offre gratuite d'API-Football : 10 requêtes par minute, une publication dure une dizaine de minutes.
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: buteo/engine
