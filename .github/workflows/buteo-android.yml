@@ -1,0 +1,157 @@
+name: Buteo – APK Android
+
+# Construit l'application à chaque envoi de code et publie l'APK de test
+# dans la page « Releases » du dépôt (version « buteo-test »).
+on:
+  push:
+    branches: [main, claude/mobile-app-design-odezzn]
+    paths:
+      - 'buteo/app/**'
+      - 'buteo/engine/exemple_picks.json'
+      - '.github/workflows/buteo-android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: buteo-android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    name: Construire l'APK
+    runs-on: ubuntu-latest
+    env:
+      CLE_PLAY_STORE: ${{ secrets.ANDROID_UPLOAD_KEYSTORE != '' }}
+    defaults:
+      run:
+        working-directory: buteo/app
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.7'
+          channel: stable
+          cache: true
+
+      - name: Dépendances
+        run: flutter pub get
+
+      - name: Analyse du code
+        run: flutter analyze
+
+      - name: Tests
+        run: flutter test
+
+      - name: Construction de l'APK
+        run: |
+          flutter build apk --release
+          cp build/app/outputs/flutter-apk/app-release.apk build/buteo-test.apk
+
+      - name: Garder l'APK avec cette exécution
+        uses: actions/upload-artifact@v4
+        with:
+          name: buteo-apk
+          path: buteo/app/build/buteo-test.apk
+
+      # Paquet pour le Play Store, signé avec la clé d'envoi secrète (si elle est configurée).
+      - name: Paquet Play Store (.aab)
+        if: env.CLE_PLAY_STORE == 'true'
+        env:
+          ANDROID_UPLOAD_KEYSTORE: ${{ secrets.ANDROID_UPLOAD_KEYSTORE }}
+          BUTEO_UPLOAD_STORE_PASSWORD: ${{ secrets.ANDROID_UPLOAD_PASSWORD }}
+          BUTEO_UPLOAD_KEY_PASSWORD: ${{ secrets.ANDROID_UPLOAD_PASSWORD }}
+          BUTEO_UPLOAD_KEY_ALIAS: upload
+        run: |
+          echo "$ANDROID_UPLOAD_KEYSTORE" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          BUTEO_UPLOAD_KEYSTORE="$RUNNER_TEMP/upload.jks" flutter build appbundle --release
+          rm "$RUNNER_TEMP/upload.jks"
+
+      - name: Garder le paquet Play Store
+        if: env.CLE_PLAY_STORE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: buteo-play-store
+          path: buteo/app/build/app/outputs/bundle/release/app-release.aab
+
+  demarrage:
+    name: Ouvrir l'app sur Android ${{ matrix.android }}
+    needs: apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - android: '11'
+            api: 30
+          - android: '15'
+            api: 35
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: buteo-apk
+
+      - name: Activer l'accélération de l'émulateur
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Installer et ouvrir Buteo
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          script: bash buteo/app/tool/demarrage_emulateur.sh buteo-test.apk demarrage
+
+      - name: Garder la capture et le journal
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: demarrage-android-${{ matrix.android }}
+          path: demarrage/
+
+  publier:
+    name: Publier la version de test
+    needs: [apk, demarrage]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: buteo-apk
+
+      - name: Placer l'étiquette « buteo-test » sur ce commit
+        run: |
+          git tag -f buteo-test "$GITHUB_SHA"
+          git push -f origin refs/tags/buteo-test
+
+      - name: Publier la version de test
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: buteo-test
+          name: Buteo – version de test
+          prerelease: true
+          files: buteo-test.apk
+          body: |
+            Version de test de Buteo, construite automatiquement depuis le commit ${{ github.sha }}.
+
+            **Installer sur un téléphone Android**
+            1. Ouvre cette page sur le téléphone et touche `buteo-test.apk` pour le télécharger.
+            2. Ouvre le fichier téléchargé. Android demande d'autoriser l'installation depuis le navigateur : accepte.
+            3. Les versions suivantes s'installent par-dessus, sans désinstaller.
+
+            Données fictives et paiements simulés : rien n'est réellement payé.

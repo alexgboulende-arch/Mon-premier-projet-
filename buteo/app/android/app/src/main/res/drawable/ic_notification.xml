@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icône des notifications : l'œil Buteo en blanc (Android la colore lui-même). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="512"
+    android:viewportHeight="512">
+    <group android:translateY="6">
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="38"
+            android:strokeLineJoin="round"
+            android:pathData="M60,280 C130,140 372,128 456,262 C384,404 150,414 60,280 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M193,274 a65,65 0 1,0 130,0 a65,65 0 1,0 -130,0 Z" />
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M40,132 C190,92 360,104 478,214 C470,226 458,236 446,242 C352,166 208,138 58,178 Z" />
+    </group>
+</vector>

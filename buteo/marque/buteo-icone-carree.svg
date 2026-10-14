@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#132457"/><stop offset="1" stop-color="#0A1230"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="0" fill="url(#bg)"/>
+  <g transform="translate(256 256) scale(0.86) translate(-258 -262)">
+  <defs>
+    <linearGradient id="gi" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2BF59A"/><stop offset="1" stop-color="#10C878"/>
+    </linearGradient>
+    <clipPath id="ci"><circle cx="258" cy="274" r="74"/></clipPath>
+  </defs>
+  <!-- eye -->
+  <path d="M60 280 C 130 140, 372 128, 456 262 C 384 404, 150 414, 60 280 Z"
+        fill="none" stroke="url(#gi)" stroke-width="30" stroke-linejoin="round"/>
+  <!-- football iris -->
+  <circle cx="258" cy="274" r="74" fill="#FFFFFF"/>
+  <g clip-path="url(#ci)" fill="#0A1230">
+    <path d="M273.3 177.0 L282.7 206.0 L258.0 224.0 L233.3 206.0 L242.7 177.0 Z"/><path d="M355.0 258.5 L330.3 276.5 L305.6 258.5 L315.0 229.5 L345.6 229.5 Z"/><path d="M302.7 361.5 L277.9 343.5 L287.4 314.5 L318.0 314.5 L327.4 343.5 Z"/><path d="M188.6 343.5 L198.0 314.5 L228.6 314.5 L238.1 343.5 L213.3 361.5 Z"/><path d="M170.4 229.5 L201.0 229.5 L210.4 258.5 L185.7 276.5 L161.0 258.5 Z"/>
+  </g>
+  <path d="M258.0 250.0 L280.8 266.6 L272.1 293.4 L243.9 293.4 L235.2 266.6 Z" fill="#0A1230"/>
+  <path d="M258.0 250.0 L258.0 220.0 M280.8 266.6 L309.4 257.3 M272.1 293.4 L289.7 317.7 M243.9 293.4 L226.3 317.7 M235.2 266.6 L206.6 257.3" stroke="#0A1230" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="258" cy="274" r="71" fill="none" stroke="#FFFFFF" stroke-width="6"/>
+  <!-- hawk brow: one blade sweeping down toward the front of the eye -->
+  <path d="M40 132 C 190 92, 360 104, 478 214 C 470 226, 458 236, 446 242 C 352 166, 208 138, 58 178 Z" fill="#FFC53D"/>
+</g>
+</svg>

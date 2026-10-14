@@ -1,0 +1,69 @@
+rules_version = '2';
+
+// Règles de sécurité de la base Firestore de Buteo.
+// À copier dans la console Firebase : Firestore Database > Règles > Publier.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Champs écrits uniquement par le serveur (formule, achats) : l'app ne peut pas les modifier.
+    function serverFields() {
+      return ['tier', 'tierUntil', 'subscription', 'entitlements', 'coupons', 'purchases'];
+    }
+
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // Profil de chaque utilisateur : équipes suivies, alertes, jeton de notification.
+    match /users/{uid} {
+      allow read, delete: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && !request.resource.data.keys().hasAny(serverFields());
+      allow update: if isOwner(uid)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(serverFields());
+    }
+
+    // Pronos publiés par le moteur. Gratuit : lisible par tous. VIP : réservé à la
+    // formule correspondante ou à un coupon du jour, puis public le lendemain
+    // (l'historique reste transparent). Un document absent peut être demandé.
+    match /picks/{id} {
+      allow read: if resource == null
+        || resource.data.tier == 'free'
+        || resource.data.publicAfter <= request.time
+        || (request.auth != null
+            && entitled(resource.data.tier, resource.data.date, resource.data.rubric));
+      allow write: if false;
+    }
+
+    // Statistiques et état du moteur : publics, écrits seulement par le moteur.
+    match /stats/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /config/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    function profilePath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    // Formule (jusqu'à son échéance) et coupons sont écrits par le serveur
+    // après vérification du paiement (functions/src/purchases.ts).
+    function entitled(tier, date, rubric) {
+      let profile = get(profilePath()).data;
+      let active = profile.get('tierUntil', timestamp.value(0)) > request.time;
+      return exists(profilePath()) && (
+        (tier == 'pro' && active && profile.get('tier', 'free') in ['pro', 'elite'])
+        || (tier == 'elite' && active && profile.get('tier', 'free') == 'elite')
+        || (date + '|' + rubric) in profile.get('coupons', [])
+      );
+    }
+
+    // Tout le reste est fermé par défaut.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

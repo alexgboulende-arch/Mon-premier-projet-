@@ -1,0 +1,21 @@
+{
+  "name": "buteo-functions",
+  "private": true,
+  "description": "Fonctions serveur de Buteo : vérification des achats et des abonnements",
+  "main": "lib/src/index.js",
+  "engines": { "node": "22" },
+  "scripts": {
+    "build": "tsc",
+    "test": "tsc && firebase emulators:exec --only firestore --project buteo-test \"node --test lib/test/*.test.js\""
+  },
+  "dependencies": {
+    "@googleapis/androidpublisher": "^42.2.0",
+    "firebase-admin": "^14.5.0",
+    "firebase-functions": "^7.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "firebase-tools": "^14.0.0",
+    "typescript": "^5.9.0"
+  }
+}
