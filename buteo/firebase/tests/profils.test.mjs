@@ -30,5 +30,13 @@ await check('modifier ses favoris quand le serveur a écrit la formule', assertS
 await check('changer la formule écrite par le serveur : refusé', assertFails(setDoc(doc(awa, 'users/awa'), { tier: 'elite' }, { merge: true })));
 await check('supprimer son profil', assertSucceeds(deleteDoc(doc(awa, 'users/awa'))));
 
+// Commandes du site : écrites par le serveur, lisibles seulement par leur auteur.
+await env.withSecurityRulesDisabled(async (ctx) => setDoc(doc(ctx.firestore(), 'orders/cmd1'), { uid: 'awa', status: 'pending', amount: 500 }));
+await check('suivre sa commande', assertSucceeds(getDoc(doc(awa, 'orders/cmd1'))));
+await check("lire la commande d'un autre : refusé", assertFails(getDoc(doc(moussa, 'orders/cmd1'))));
+await check('sans compte, lire une commande : refusé', assertFails(getDoc(doc(anon, 'orders/cmd1'))));
+await check('marquer soi-même sa commande payée : refusé', assertFails(updateDoc(doc(awa, 'orders/cmd1'), { status: 'paid' })));
+await check('créer une commande soi-même : refusé', assertFails(setDoc(doc(awa, 'orders/cmd2'), { uid: 'awa', status: 'paid' })));
+
 await env.cleanup();
 console.log(`\n${ok} vérifications réussies`);

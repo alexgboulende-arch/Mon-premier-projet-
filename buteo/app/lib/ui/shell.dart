@@ -20,7 +20,7 @@ class Shell extends StatefulWidget {
   State<Shell> createState() => _ShellState();
 }
 
-class _ShellState extends State<Shell> {
+class _ShellState extends State<Shell> with WidgetsBindingObserver {
   Timer? _tick;
   StreamSubscription<String>? _notices;
 
@@ -30,6 +30,7 @@ class _ShellState extends State<Shell> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // Met à jour les scores et les états chaque minute.
     _tick = Timer.periodic(const Duration(minutes: 1), (_) => AppScope.read(context).tick());
     // Premier lancement : demande l'autorisation d'envoyer les alertes de 00:00.
@@ -44,8 +45,15 @@ class _ShellState extends State<Shell> {
     });
   }
 
+  /// Retour dans l'app (après un paiement sur le site, par exemple) : on relit l'accès du compte.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) AppScope.read(context).refreshAccess();
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tick?.cancel();
     _notices?.cancel();
     super.dispose();

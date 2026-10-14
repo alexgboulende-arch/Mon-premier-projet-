@@ -1,0 +1,15 @@
+{
+  "name": "buteo-site",
+  "private": true,
+  "description": "Site de paiement de Buteo : Mobile Money et crypto",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --minify --format=esm --target=es2020 --outfile=public/app.js"
+  },
+  "dependencies": {
+    "firebase": "^13.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

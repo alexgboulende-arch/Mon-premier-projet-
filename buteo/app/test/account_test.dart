@@ -122,6 +122,33 @@ void main() {
     );
   });
 
+  test('un achat fait sur le site apparaît au retour dans l’app', () async {
+    SharedPreferences.setMockInitialValues({});
+    final auth = FakeAuthService();
+    final store = FakeUserStore();
+    final state = AppState(await SharedPreferences.getInstance(), auth: auth, store: store, demoMode: false);
+    await state.start();
+    await state.signInWithGoogle();
+    await flush();
+    var refreshed = 0;
+    state.onAccessChanged = () => refreshed++;
+
+    // Rien de nouveau : pas de rechargement inutile des pronos.
+    await state.refreshAccess();
+    expect(refreshed, 0);
+
+    store.docs['u1'] = {
+      'tier': 'elite',
+      'tierUntil': DateTime.now().toUtc().add(const Duration(days: 30)),
+      'coupons': <String>[],
+    };
+    await state.refreshAccess();
+    expect(state.tier, Tier.elite);
+    expect(refreshed, 1);
+    await state.refreshAccess();
+    expect(refreshed, 1);
+  });
+
   group('achats Google Play (vraies données)', () {
     Future<(AppState, FakeBillingService)> realState() async {
       SharedPreferences.setMockInitialValues({});

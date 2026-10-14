@@ -93,6 +93,21 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm test
 
+  site:
+    name: Site de paiement (construction)
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: buteo/firebase/site
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - run: npm run build
+
   # Lancé seulement quand le message du commit contient « [diagnostic] » :
   # une dizaine de requêtes pour savoir ce que permet la clé API-Football.
   diagnostic:

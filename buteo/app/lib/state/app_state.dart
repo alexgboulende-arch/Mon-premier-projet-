@@ -125,7 +125,10 @@ class AppState extends ChangeNotifier {
 
   Future<void> buyCoupon(Rubric r) => billing.buyCoupon(r);
 
-  Future<void> restorePurchases() => billing.restore();
+  Future<void> restorePurchases() async {
+    await refreshAccess();
+    await billing.restore();
+  }
 
   void _onBilling(BillingEvent e) {
     switch (e) {
@@ -269,14 +272,35 @@ class AppState extends ChangeNotifier {
   }
 
   /// Formule et coupons écrits par le serveur dans le profil.
-  void _readAccess(Map<String, dynamic>? remote) {
+  /// Avec [onlyIfChanged], rien ne se passe si l'accès n'a pas bougé.
+  void _readAccess(Map<String, dynamic>? remote, {bool onlyIfChanged = false}) {
     final saved = remote?['tier'];
-    serverTier = Tier.values.firstWhere((t) => t.name == saved, orElse: () => Tier.free);
-    final until = remote?['tierUntil'];
-    serverTierUntil = until is DateTime ? until : null;
-    _serverCoupons = {...List<String>.from(remote?['coupons'] as List? ?? const [])};
+    final tier = Tier.values.firstWhere((t) => t.name == saved, orElse: () => Tier.free);
+    final until = remote?['tierUntil'] is DateTime ? remote!['tierUntil'] as DateTime : null;
+    final coupons = {...List<String>.from(remote?['coupons'] as List? ?? const [])};
+    final same =
+        tier == serverTier &&
+        until == serverTierUntil &&
+        coupons.length == _serverCoupons.length &&
+        coupons.containsAll(_serverCoupons);
+    if (onlyIfChanged && same) return;
+    serverTier = tier;
+    serverTierUntil = until;
+    _serverCoupons = coupons;
     onAccessChanged?.call();
     notifyListeners();
+  }
+
+  /// Relit la formule et les coupons du compte : un achat fait ailleurs (sur le
+  /// site de Buteo, par exemple) apparaît dès le retour dans l'app.
+  Future<void> refreshAccess() async {
+    final uid = account?.uid;
+    if (uid == null || demoMode) return;
+    try {
+      _readAccess(await store.load(uid), onlyIfChanged: true);
+    } catch (e) {
+      debugPrint('Accès du compte : $e');
+    }
   }
 
   Future<void> _pushToAccount({bool withToken = false}) async {

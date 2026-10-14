@@ -45,6 +45,13 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Commandes du site (Mobile Money, crypto) : créées et validées par le serveur,
+    // lisibles par leur auteur pour suivre le paiement.
+    match /orders/{id} {
+      allow read: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow write: if false;
+    }
+
     function profilePath() {
       return /databases/$(database)/documents/users/$(request.auth.uid);
     }
