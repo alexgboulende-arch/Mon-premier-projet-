@@ -12,6 +12,8 @@ from dataclasses import dataclass
 import requests
 
 BASE_URL = "https://v3.football.api-sports.io"
+# Offre gratuite : 10 requêtes par minute au plus, en plus des 100 par jour.
+FREE_INTERVAL = 6.5
 
 # Codes d'état d'un match.
 NOT_STARTED = {"TBD", "NS"}
@@ -70,6 +72,7 @@ class ApiFootball:
         self._session.headers.update({"x-apisports-key": key})
         self.calls = 0
         self._plan: str | None = None
+        self._last = 0.0
 
     def status(self) -> dict:
         """Forfait et requêtes du jour. Cette page ne compte pas dans le quota."""
@@ -101,10 +104,11 @@ class ApiFootball:
             if page > 1:
                 params["page"] = page
             for attempt in range(3):
+                self._pace()
                 r = self._session.get(f"{BASE_URL}/{path}", params=params, timeout=30)
                 self.calls += 1
-                if r.status_code == 429 and attempt < 2:
-                    time.sleep(6 * (attempt + 1))  # trop de requêtes par minute : on patiente
+                if _rate_limited(r) and attempt < 2:
+                    time.sleep(61)  # requêtes de la minute épuisées : on attend la suivante
                     continue
                 break
             r.raise_for_status()
@@ -117,6 +121,14 @@ class ApiFootball:
             if paging.get("current", 1) >= paging.get("total", 1):
                 return out
             page += 1
+
+    def _pace(self) -> None:
+        """Offre gratuite : on espace les requêtes pour rester sous 10 par minute."""
+        if self.free:
+            wait = self._last + FREE_INTERVAL - time.monotonic()
+            if wait > 0:
+                time.sleep(wait)
+        self._last = time.monotonic()
 
     def current_leagues(self, country: str) -> list[dict]:
         return self.get("leagues", country=country, current="true")
@@ -138,3 +150,16 @@ class ApiFootball:
         """Bookmakers et cotes d'un match (vide si aucune cote publiée)."""
         response = self.get("odds", fixture=fixture_id)
         return response[0].get("bookmakers", []) if response else []
+
+
+def _rate_limited(r: requests.Response) -> bool:
+    """Trop de requêtes dans la minute (code 429, ou erreur « rateLimit » dans une réponse 200)."""
+    if r.status_code == 429:
+        return True
+    if r.status_code != 200:
+        return False
+    try:
+        errors = r.json().get("errors")
+    except ValueError:
+        return False
+    return isinstance(errors, dict) and "rateLimit" in errors

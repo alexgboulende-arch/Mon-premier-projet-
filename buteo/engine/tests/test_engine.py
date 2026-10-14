@@ -338,3 +338,49 @@ def test_secret_firebase_mal_colle():
     with pytest.raises(BadServiceAccount, match="pas un fichier JSON complet"):
         service_account('{"type": "service_account", "project_id"')
     assert service_account('{"type": "service_account"}')["type"] == "service_account"
+
+
+class _Reply:
+    def __init__(self, status, data):
+        self.status_code, self._data = status, data
+
+    def json(self):
+        return self._data
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise RuntimeError(self.status_code)
+
+
+class _FakeSession:
+    """Répond « Free » à la page d'état, puis rejoue les réponses prévues."""
+
+    def __init__(self, replies):
+        self.headers, self.replies, self.paths = {}, list(replies), []
+
+    def get(self, url, params=None, timeout=None):
+        path = url.rsplit("/", 1)[1]
+        if path == "status":
+            plan = {"subscription": {"plan": "Free"}, "requests": {"current": 0, "limit_day": 100}}
+            return _Reply(200, {"errors": [], "response": plan})
+        self.paths.append(path)
+        return self.replies.pop(0)
+
+
+def test_offre_gratuite_10_requetes_par_minute(monkeypatch):
+    from engine import api_football
+
+    sleeps = []
+    clock = [1000.0]
+    monkeypatch.setattr(api_football.time, "sleep", lambda s: (sleeps.append(s), clock.__setitem__(0, clock[0] + s)))
+    monkeypatch.setattr(api_football.time, "monotonic", lambda: clock[0])
+    ok = _Reply(200, {"errors": [], "response": [{"x": 1}], "paging": {"current": 1, "total": 1}})
+    limited = _Reply(200, {"errors": {"rateLimit": "Too many requests. Your rate limit is 10 requests per minute."}})
+    session = _FakeSession([ok, limited, _Reply(429, {}), ok])
+    client = api_football.ApiFootball("cle", session=session)
+
+    assert client.get("leagues") == [{"x": 1}]
+    assert client.get("fixtures") == [{"x": 1}]
+    # Requêtes espacées de 6,5 s, et une minute d'attente à chaque refus.
+    assert sleeps == [api_football.FREE_INTERVAL, 61, 61]
+    assert session.paths == ["leagues", "fixtures", "fixtures", "fixtures"]
