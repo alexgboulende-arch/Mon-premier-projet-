@@ -3,6 +3,7 @@
     python -m engine publier   [--date AAAA-MM-JJ]   pronos de la journée (par défaut : demain après 20:00 GMT)
     python -m engine resultats                       met à jour les matchs en cours et terminés
     python -m engine essai     [--json fichier]      essai hors ligne avec des données simulées
+    python -m engine diagnostic                      ce que permet la clé API-Football (forfait, cotes…)
 
 `publier` et `resultats` lisent API_FOOTBALL_KEY et FIREBASE_SERVICE_ACCOUNT.
 Sans ces variables, ils s'arrêtent sans erreur (le dépôt peut tourner sans
@@ -52,8 +53,18 @@ def main(argv: list[str] | None = None) -> int:
     p_try = sub.add_parser("essai", help="essai hors ligne avec des données simulées")
     p_try.add_argument("--date", default="2026-10-14")
     p_try.add_argument("--json", help="écrit les documents produits dans ce fichier")
+    sub.add_parser("diagnostic", help="ce que permet la clé API-Football")
     args = parser.parse_args(argv)
     now = datetime.now(timezone.utc)
+
+    if args.command == "diagnostic":
+        if not os.environ.get("API_FOOTBALL_KEY"):
+            print("::notice::Secret API_FOOTBALL_KEY manquant : diagnostic impossible.")
+            return 0
+        from .diagnostic import run
+
+        run(os.environ["API_FOOTBALL_KEY"], now)
+        return 0
 
     if args.command == "essai":
         store = MemoryStore()
