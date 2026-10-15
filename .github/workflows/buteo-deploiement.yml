@@ -66,10 +66,17 @@ jobs:
           for VAR in NOWPAYMENTS_API_KEY NOWPAYMENTS_IPN_SECRET EBILLING_USERNAME EBILLING_SHARED_KEY EBILLING_API_URL EBILLING_PORTAL_URL BUTEO_ADMINS; do
             if [ -n "${!VAR}" ]; then printf '%s=%s\n' "$VAR" "${!VAR}" >> "$ENV_FONCTIONS"; fi
           done
+          # Les règles passent par le SDK Admin (pas de rôle supplémentaire),
+          # les fonctions et le site par firebase deploy.
           case "$CIBLE" in
-            regles) SEULEMENT=firestore:rules ;;
+            regles) SEULEMENT= ;;
             fonctions) SEULEMENT=functions ;;
             site) SEULEMENT=hosting ;;
-            *) SEULEMENT=firestore:rules,functions,hosting ;;
+            *) SEULEMENT=functions,hosting ;;
           esac
-          npx firebase deploy --only "$SEULEMENT" --project "$PROJET" --non-interactive --force
+          if [ "$CIBLE" = regles ] || [ "$CIBLE" = tout ]; then
+            node publier-regles.mjs "$PROJET"
+          fi
+          if [ -n "$SEULEMENT" ]; then
+            npx firebase deploy --only "$SEULEMENT" --project "$PROJET" --non-interactive --force
+          fi
