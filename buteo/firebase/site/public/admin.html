@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Buteo · Administration</title>
+  <meta name="theme-color" content="#0A1230">
+  <link rel="icon" href="icone.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="admin.js"></script>
+</head>
+<body>
+  <header class="top">
+    <img src="logo.svg" alt="Buteo" class="logo" width="146" height="50">
+    <span class="secure">Administration</span>
+  </header>
+
+  <main>
+    <section id="porte" class="card">
+      <h1>Espace d'administration</h1>
+      <p class="muted" id="porte-texte">Réservé à l'administrateur de Buteo.</p>
+      <button id="connexion" class="btn btn-light" type="button">Continuer avec Google</button>
+      <p class="muted small" id="connecte-comme" hidden></p>
+    </section>
+
+    <div id="espace" hidden>
+      <section class="card">
+        <div class="offer-head"><h2 class="flat">Chiffres</h2><button id="rafraichir" class="link small" type="button">Actualiser</button></div>
+        <div class="figures" id="chiffres"><p class="muted small">Chargement…</p></div>
+      </section>
+
+      <section class="card">
+        <h2 class="flat">Offrir un accès</h2>
+        <p class="muted small">Cadeau, geste commercial, ou paiement bloqué : l'accès apparaît dans l'app de la personne.</p>
+        <label class="field"><span>Adresse e-mail du compte Google</span><input id="acces-email" type="email" autocomplete="off" placeholder="client@gmail.com"></label>
+        <label class="field">
+          <span>Offre</span>
+          <select id="acces-offre">
+            <option value="pro:1">Pro · 1 mois</option>
+            <option value="pro:3">Pro · 3 mois</option>
+            <option value="pro:6">Pro · 6 mois</option>
+            <option value="elite:1">Élite · 1 mois</option>
+            <option value="elite:3">Élite · 3 mois</option>
+            <option value="elite:6">Élite · 6 mois</option>
+            <option value="coupon:score">Coupon du jour · Score exact</option>
+            <option value="coupon:htft">Coupon du jour · Mi-temps / Fin</option>
+            <option value="coupon:c5">Coupon du jour · Combiné cote 5+</option>
+            <option value="coupon:c10">Coupon du jour · Combiné cote 10+</option>
+            <option value="coupon:simples">Coupon du jour · Simples VIP</option>
+          </select>
+        </label>
+        <button id="acces-donner" class="btn btn-gold" type="button">Offrir l'accès</button>
+        <p id="acces-resultat" class="small" role="status"></p>
+      </section>
+
+      <section class="card">
+        <h2 class="flat">Concours : classement de la semaine</h2>
+        <p class="muted small">Renomme ou exclus un pseudo inapproprié. L'exclusion vaut aussi pour les journées suivantes.</p>
+        <div id="classement"><p class="muted small">Chargement…</p></div>
+        <p id="moderation-resultat" class="small" role="status"></p>
+      </section>
+
+      <section class="card">
+        <h2 class="flat">Message à tous</h2>
+        <p class="muted small">Notification envoyée à tous les téléphones où l'app Buteo est installée. À utiliser avec parcimonie.</p>
+        <label class="field"><span>Titre (60 caractères au plus)</span><input id="message-titre" maxlength="60" placeholder="Nouveau : le concours du jour"></label>
+        <label class="field"><span>Message (240 caractères au plus)</span><textarea id="message-texte" maxlength="240" rows="3" placeholder="Prédis 5 matchs chaque jour et grimpe au classement !"></textarea></label>
+        <button id="message-envoyer" class="btn btn-win" type="button">Envoyer à tous</button>
+        <p id="message-resultat" class="small" role="status"></p>
+      </section>
+
+      <p class="center"><button id="deconnexion" class="link small" type="button">Se déconnecter</button></p>
+    </div>
+  </main>
+</body>
+</html>

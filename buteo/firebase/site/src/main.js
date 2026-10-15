@@ -3,31 +3,10 @@
 // paiement chez E-Billing (Mobile Money) ou NOWPayments (crypto), puis suivi
 // de la commande jusqu'à l'accès débloqué dans l'app.
 
-import { initializeApp } from "firebase/app";
-import {
-  GoogleAuthProvider,
-  getAuth,
-  onAuthStateChanged,
-  signInWithPopup,
-  signInWithRedirect,
-  signOut,
-} from "firebase/auth";
-import { doc, getFirestore, onSnapshot } from "firebase/firestore";
-import { getFunctions, httpsCallable } from "firebase/functions";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { doc, onSnapshot } from "firebase/firestore";
 
-// Identifiants publics du projet (comme dans l'app) : la sécurité repose sur les règles et le serveur.
-const app = initializeApp({
-  apiKey: "AIzaSyAiho6O_-xrO2rVs_D_b-8pOmViRTajyjU",
-  authDomain: "buteo-bbec5.firebaseapp.com",
-  projectId: "buteo-bbec5",
-  storageBucket: "buteo-bbec5.firebasestorage.app",
-  messagingSenderId: "823242305441",
-});
-const auth = getAuth(app);
-auth.languageCode = "fr";
-const db = getFirestore(app);
-const functions = getFunctions(app, "europe-west1");
-const call = (name, data) => httpsCallable(functions, name)(data).then((r) => r.data);
+import { auth, call, db, fcfa, signInWithGoogle } from "./firebase.js";
 
 // Prix affichés (le serveur fixe le prix réel de chaque commande).
 const PRICES = { pro: { 1: 2900, 3: 7500, 6: 13900 }, elite: { 1: 6900, 3: 17900, 6: 32900 }, coupon: 500 };
@@ -36,7 +15,6 @@ const TIERS = { free: "gratuite", pro: "Pro", elite: "Élite" };
 const RUBRICS = { score: "Score exact", htft: "Mi-temps / Fin", c5: "Combiné cote 5+", c10: "Combiné cote 10+", simples: "Simples VIP" };
 
 const $ = (id) => document.getElementById(id);
-const fcfa = (n) => `${n.toLocaleString("fr-FR").replace(/[  ]/g, " ")} FCFA`;
 const day = (d) => d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 
 let methods = { mobile: null, crypto: null };
@@ -233,16 +211,7 @@ $("recommencer").onclick = () => {
 
 // --- Compte ----------------------------------------------------------------------------
 
-const google = new GoogleAuthProvider();
-$("connexion").onclick = async () => {
-  try {
-    await signInWithPopup(auth, google);
-  } catch (e) {
-    if (["auth/popup-blocked", "auth/operation-not-supported-in-this-environment"].includes(e.code)) {
-      await signInWithRedirect(auth, google);
-    }
-  }
-};
+$("connexion").onclick = () => signInWithGoogle().catch(() => undefined);
 $("deconnexion").onclick = () => signOut(auth);
 
 onAuthStateChanged(auth, (user) => {

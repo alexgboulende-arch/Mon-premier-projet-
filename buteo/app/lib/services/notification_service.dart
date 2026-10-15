@@ -99,6 +99,8 @@ class DeviceNotificationService implements NotificationService {
             await fcm.unsubscribeFromTopic(topic);
           }
         }
+        // Annonces de Buteo (nouveautés), envoyées depuis l'espace d'administration.
+        await fcm.subscribeToTopic('annonces');
       }
     } catch (e) {
       debugPrint('Notifications : $e');
