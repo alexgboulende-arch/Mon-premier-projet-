@@ -10,6 +10,7 @@ import '../widgets/common.dart';
 import '../widgets/match_pick_card.dart';
 import '../widgets/rubric_tile.dart';
 import '../widgets/tip_card.dart';
+import 'contest_screen.dart';
 import 'favorites_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -97,6 +98,8 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(height: 6),
           TipCard(tip: best, status: statusOf(best, today, now), rubricName: selection.name),
         ],
+        const SizedBox(height: 18),
+        const _ContestCard(),
         if (state.showAds) ...[const SizedBox(height: 22), const AdSlot()],
         const SizedBox(height: 26),
         const _FavoritesSection(),
@@ -122,6 +125,47 @@ class HomeScreen extends StatelessWidget {
         const SizedBox(height: 22),
         const ResponsibleNote(),
       ],
+    );
+  }
+}
+
+/// Accès au concours « Pronos du jour ».
+class _ContestCard extends StatelessWidget {
+  const _ContestCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Panel(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(color: c.winSoft, borderRadius: BorderRadius.circular(12)),
+            child: Icon(Icons.emoji_events_outlined, color: c.winText),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Concours du jour', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                SizedBox(height: 2),
+                MutedText('5 matchs, prédis 1, N ou 2. Grimpe au classement.'),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: () => openContest(context),
+            child: Text(
+              'Jouer',
+              style: TextStyle(color: c.winText, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

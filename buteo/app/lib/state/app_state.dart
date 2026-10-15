@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/contest.dart';
 import '../data/models.dart';
 import '../data/tips_repository.dart';
 import '../services/ads_service.dart';
@@ -32,6 +33,7 @@ class AppState extends ChangeNotifier {
     _unlocked = {...?_prefs.getStringList(_kUnlocked)};
     _favorites = {...?_prefs.getStringList(_kFavorites)};
     lightTheme = _prefs.getBool(_kLight) ?? false;
+    pseudo = _prefs.getString(_kPseudo);
     for (final k in notifications.keys.toList()) {
       notifications[k] = _prefs.getBool('notif_$k') ?? notifications[k]!;
     }
@@ -43,6 +45,17 @@ class AppState extends ChangeNotifier {
   static const _kFavorites = 'favorites';
   static const _kLight = 'lightTheme';
   static const _kAskedNotif = 'askedNotificationPermission';
+  static const _kPseudo = 'pseudo';
+
+  /// Pseudo affiché dans les classements du concours.
+  String? pseudo;
+
+  Future<void> setPseudo(String value) async {
+    pseudo = value.trim();
+    await _prefs.setString(_kPseudo, pseudo!);
+    notifyListeners();
+    await _pushToAccount();
+  }
 
   final SharedPreferences _prefs;
   final AuthService auth;
@@ -252,6 +265,11 @@ class AppState extends ChangeNotifier {
       _readAccess(remote);
       if (remote != null) {
         _favorites.addAll(List<String>.from(remote['favorites'] as List? ?? const []));
+        final remotePseudo = remote['pseudo'];
+        if (pseudo == null && remotePseudo is String && remotePseudo.isNotEmpty) {
+          pseudo = remotePseudo;
+          await _prefs.setString(_kPseudo, remotePseudo);
+        }
         final alerts = remote['notifications'];
         if (alerts is Map) {
           for (final k in notifications.keys.toList()) {
@@ -311,6 +329,7 @@ class AppState extends ChangeNotifier {
       await store.save(uid, {
         'favorites': _favorites.toList()..sort(),
         'notifications': notifications,
+        'pseudo': ?pseudo,
         'pushToken': ?token,
       });
     } catch (e) {
@@ -348,10 +367,16 @@ class AppState extends ChangeNotifier {
 
 /// Donne accès à l'état et aux pronos dans tout l'arbre de widgets.
 class AppScope extends InheritedNotifier<AppState> {
-  const AppScope({super.key, required AppState state, required this.repository, required super.child})
-    : super(notifier: state);
+  const AppScope({
+    super.key,
+    required AppState state,
+    required this.repository,
+    required this.contest,
+    required super.child,
+  }) : super(notifier: state);
 
   final TipsRepository repository;
+  final ContestRepository contest;
 
   /// À utiliser dans `build` : le widget se reconstruit quand l'état change.
   static AppState of(BuildContext context) => context.dependOnInheritedWidgetOfExactType<AppScope>()!.notifier!;
@@ -360,4 +385,7 @@ class AppScope extends InheritedNotifier<AppState> {
   static AppState read(BuildContext context) => context.getInheritedWidgetOfExactType<AppScope>()!.notifier!;
 
   static TipsRepository repo(BuildContext context) => context.getInheritedWidgetOfExactType<AppScope>()!.repository;
+
+  static ContestRepository contestOf(BuildContext context) =>
+      context.getInheritedWidgetOfExactType<AppScope>()!.contest;
 }
