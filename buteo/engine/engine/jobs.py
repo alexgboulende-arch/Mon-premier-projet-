@@ -9,7 +9,7 @@ from datetime import date as Date
 from datetime import datetime, timedelta, timezone
 
 from . import api_football as api
-from . import contest, model
+from . import contest, model, purge
 from .markets import bookmaker_odds
 from .notify import Notifier
 from .picks import SETTLED, day_stats, doc_status, rubric_doc, tip_update
@@ -167,6 +167,9 @@ def publish(client: api.ApiFootball, store: Store, date: str, now: datetime) -> 
     for rubric, items in chosen.items():
         store.set(f"picks/{date}_{rubric}", rubric_doc(rubric, date, items, now))
     contest.publish_contest(store, date, contest_pool, now)
+    purged = purge.purge_deleted_accounts(store, now)
+    if purged:
+        log.info("Comptes supprimés retirés du concours : %d", purged)
     cfg = store.get("config/engine") or {}
     store.set(
         "config/engine",

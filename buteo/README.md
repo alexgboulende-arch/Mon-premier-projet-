@@ -1,9 +1,10 @@
 # Buteo — Pronostics sportifs
 
 Application mobile de pronostics sportifs inspirée de *Multi Betting Tips*, en
-version améliorée. **Statut : étape 4 sur 5 (paiements et publicité). Le moteur publie
-de vrais pronos chaque nuit ; le site de paiement attend les comptes E-Billing et
-NOWPayments, et l'app ses comptes Google Play et AdMob.**
+version améliorée. **Statut : les 5 étapes sont construites. Le moteur publie de vrais
+pronos chaque nuit ; restent à activer le site (forfait Blaze), les comptes de
+paiement (E-Billing, NOWPayments, Google Play), AdMob, puis la publication sur le
+Play Store.**
 
 ## Décisions prises
 
@@ -34,11 +35,11 @@ Organisation du code :
 
 | Dossier | Contenu |
 |---|---|
-| `lib/data/` | Rubriques, offres, pronos de démonstration, statistiques |
+| `lib/data/` | Rubriques, offres, pronos de démonstration, statistiques, concours, journal de paris |
 | `lib/state/` | Formule, coupons, favoris, compte, thème et alertes |
 | `lib/services/` | Firebase : connexion, données du compte, notifications ; paiement Google Play, publicité AdMob |
 | `lib/theme/` | Couleurs et polices de la marque |
-| `lib/ui/screens/` | Accueil, rubrique, live, stats, offres, profil, démarrage |
+| `lib/ui/screens/` | Accueil, rubrique, live, stats, offres, profil, concours, journal, démarrage |
 | `lib/ui/widgets/` | Carte de prono, tuiles, badges, fenêtres d'achat |
 | `test/` | Tests automatiques (générateur, états des matchs, compte, écrans) |
 | `../firebase/` | Règles de sécurité de la base Firestore, fonctions serveur (vérification des achats), site de paiement (`site/`) et leurs tests |
@@ -63,8 +64,11 @@ Commandes utiles (dans `app/`) : `flutter test`, `flutter analyze`,
    bannière AdMob dans la version gratuite. Site de paiement (étape 4b, fait,
    à activer avec les comptes E-Billing et NOWPayments) : Mobile Money et
    crypto, accès débloqué dans l'app dès le paiement vérifié.
-5. **Communauté et publication** : concours, journal de paris, back-office,
-   test fermé puis mise en ligne sur le Play Store.
+5. **Communauté et publication** (fait, à activer) : concours « Pronos du
+   jour » avec classements et badges, journal de paris, espace
+   d'administration sur le site, pages de confidentialité et de suppression
+   de compte, fiche Play Store prête (`store/`). Reste le test fermé puis la
+   mise en ligne.
 
 ## Configurer Firebase (à faire une fois)
 
@@ -249,6 +253,54 @@ Mise en route (forfait Blaze et rôles du compte de service comme à l'étape 4)
 
 Un moyen de paiement sans clés s'affiche « bientôt disponible ». **PViT** sera
 branché de la même façon dès réception de sa documentation.
+
+## Concours, journal et administration (étape 5)
+
+**Concours « Pronos du jour »** : chaque nuit, le moteur choisit 5 grands
+matchs (championnats prioritaires d'abord). Dans l'app (carte « Concours du
+jour » de l'accueil), chacun choisit un pseudo puis prédit 1, N ou 2 avant le
+coup d'envoi. Un bon prono rapporte sa cote × 10 points. Le moteur calcule les
+classements de la semaine et du mois, et les badges : champion et podium de la
+semaine, journée sans faute, semaine jouée tous les jours. Aucun argent en jeu.
+Détails : `engine/engine/contest.py`.
+
+**Journal de paris** : Profil → Journal de paris, ou le bouton « Journal » de
+chaque prono. Bénéfice, rendement et réussite ; copié dans le compte.
+
+**Espace d'administration** : `https://buteo-bbec5.web.app/admin.html`, une
+fois le site publié (forfait Blaze). Pour y avoir accès :
+
+1. GitHub → Settings → Secrets and variables → Actions → onglet **Variables**
+   → New repository variable : nom `BUTEO_ADMINS`, valeur ton adresse Gmail
+   (plusieurs adresses : séparées par des virgules).
+2. Actions → « Buteo – déploiement Firebase » → Run workflow → `fonctions`.
+
+On y voit les utilisateurs, les ventes des 30 derniers jours, la réussite des
+pronos et l'état du moteur ; on peut offrir une formule ou un coupon, renommer
+ou exclure un joueur du concours, et envoyer une notification à tous.
+
+**Suppression de compte** : dans l'app (Profil) ou sur
+`https://buteo-bbec5.web.app/suppression-compte.html`. Le moteur retire le
+compte du concours la nuit suivante (`engine/engine/purge.py`).
+
+## Publier sur le Play Store (étape 5)
+
+Tout le texte et les images sont dans [`store/fiche-play-store.md`](store/fiche-play-store.md)
+(nom, descriptions, captures, image de présentation, réponses aux
+questionnaires « Contenu de l'application » et « Sécurité des données »).
+
+Dans l'ordre :
+
+1. Compte Play Console, clé d'envoi et produits : voir « Activer les
+   paiements et la publicité » ci-dessus. Le site doit être publié, car la fiche
+   demande les liens de confidentialité et de suppression de compte.
+2. **Test interne** avec le `.aab` construit par GitHub (le numéro de version
+   augmente tout seul à chaque construction).
+3. **Test fermé : 12 testeurs pendant 14 jours** (obligatoire pour un compte
+   personnel), puis demande d'accès à la production.
+4. **Production** : Gabon et Afrique francophone d'abord.
+
+Avant la production, remplace les identifiants AdMob de test par les tiens.
 
 ## Paiements
 

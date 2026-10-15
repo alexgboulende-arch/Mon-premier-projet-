@@ -27,6 +27,8 @@ class Store(Protocol):
 
     def list(self, collection: str) -> dict[str, dict]: ...
 
+    def delete(self, path: str) -> None: ...
+
 
 class MemoryStore:
     """Firestore simulé, pour les tests et l'essai hors ligne."""
@@ -47,6 +49,9 @@ class MemoryStore:
             for path, doc in self.docs.items()
             if path.startswith("picks/") and doc.get("date") == date
         }
+
+    def delete(self, path: str) -> None:
+        self.docs.pop(path, None)
 
     def list(self, collection: str) -> dict[str, dict]:
         """Documents d'une collection (sans les sous-collections)."""
@@ -84,6 +89,9 @@ class FirestoreStore:
 
     def list(self, collection: str) -> dict[str, dict]:
         return {snap.id: snap.to_dict() for snap in self._db.collection(collection).stream()}
+
+    def delete(self, path: str) -> None:
+        self._db.document(path).delete()
 
 
 class BadServiceAccount(RuntimeError):

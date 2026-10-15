@@ -140,7 +140,7 @@ class Plan {
 const plans = <Plan>[
   Plan(
     tier: Tier.free,
-    perks: ['Les 7 rubriques gratuites chaque jour', 'Historique et statistiques complets', 'Avec publicités'],
+    perks: ['Les rubriques gratuites chaque jour', 'Historique et statistiques complets', 'Avec publicités'],
   ),
   Plan(
     tier: Tier.pro,
@@ -155,7 +155,7 @@ const plans = <Plan>[
   Plan(
     tier: Tier.elite,
     prices: {1: (fcfa: 6900, euros: '10,49'), 3: (fcfa: 17900, euros: '27,49'), 6: (fcfa: 32900, euros: '49,99')},
-    perks: ['Tout Pro', 'Score exact, Combiné cote 5+, Live', 'Alertes pendant les matchs en direct'],
+    perks: ['Tout Pro', 'Score exact, Combiné cote 5+', 'Pronos live et leurs alertes (bientôt)'],
   ),
 ];
 

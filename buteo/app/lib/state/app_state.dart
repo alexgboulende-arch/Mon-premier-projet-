@@ -249,6 +249,7 @@ class AppState extends ChangeNotifier {
   Future<void> deleteAccount() async {
     final uid = account?.uid;
     if (uid == null) return;
+    await store.requestDeletion(uid);
     await journal.deleteRemote(uid);
     await store.delete(uid);
     await auth.deleteAccount();

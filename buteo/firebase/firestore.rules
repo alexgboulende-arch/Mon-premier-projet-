@@ -57,6 +57,15 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Demande de suppression de compte (app ou site) : le moteur efface ensuite
+    // les données du concours rattachées au compte, chaque nuit.
+    match /deletionRequests/{uid} {
+      allow create, update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['uid', 'requestedAt'])
+        && request.resource.data.uid == uid;
+      allow read, delete: if false;
+    }
+
     // Concours « Pronos du jour » : matchs publiés par le moteur, pronos des joueurs
     // acceptés seulement avant le coup d'envoi (heure lue dans le concours).
     match /contests/{date} {

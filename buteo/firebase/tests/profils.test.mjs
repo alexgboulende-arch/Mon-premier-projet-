@@ -40,6 +40,11 @@ await check('mise négative : refusé', assertFails(setDoc(doc(awa, 'users/awa/j
 await check('champ inconnu : refusé', assertFails(setDoc(doc(awa, 'users/awa/journal/p4'), { ...bet, id: 'p4', tier: 'elite' })));
 await check('effacer un pari', assertSucceeds(deleteDoc(doc(awa, 'users/awa/journal/p1'))));
 
+// Demande de suppression de compte.
+await check('demander la suppression de son compte', assertSucceeds(setDoc(doc(awa, 'deletionRequests/awa'), { uid: 'awa', requestedAt: serverTimestamp() })));
+await check("demander la suppression d'un autre compte : refusé", assertFails(setDoc(doc(moussa, 'deletionRequests/awa'), { uid: 'awa', requestedAt: serverTimestamp() })));
+await check('lire les demandes de suppression : refusé', assertFails(getDoc(doc(awa, 'deletionRequests/awa'))));
+
 // Commandes du site : écrites par le serveur, lisibles seulement par leur auteur.
 await env.withSecurityRulesDisabled(async (ctx) => setDoc(doc(ctx.firestore(), 'orders/cmd1'), { uid: 'awa', status: 'pending', amount: 500 }));
 await check('suivre sa commande', assertSucceeds(getDoc(doc(awa, 'orders/cmd1'))));

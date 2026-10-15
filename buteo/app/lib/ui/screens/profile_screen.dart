@@ -237,7 +237,7 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 18),
-        Center(child: MutedText('Buteo 0.5', size: 11.5)),
+        Center(child: MutedText('Buteo 0.6', size: 11.5)),
       ],
     );
   }

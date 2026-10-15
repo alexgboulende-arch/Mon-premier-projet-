@@ -509,3 +509,28 @@ def test_liste_d_une_collection_sans_ses_sous_collections():
     store.set("contests/2026-10-14/picks/u1_1", {"b": 2})
     assert store.list("contests") == {"2026-10-14": {"a": 1}}
     assert store.list("contests/2026-10-14/picks") == {"u1_1": {"b": 2}}
+
+
+def test_compte_supprime_retire_du_concours(published):
+    from engine.purge import purge_deleted_accounts
+
+    api, store, _ = published
+    ids = [m["fixtureId"] for m in store.get(f"contests/{DATE}")["matches"]]
+    for uid in ("parti", "reste"):
+        for fid in ids:
+            _pick(store, uid, fid, "1", uid.capitalize())
+    jobs.update_results(api, store, NIGHT, Notifier())
+    assert "parti" in store.get(f"contestScores/{DATE}")["players"]
+    store.set("moderation/all", {"players": {"parti": {"pseudo": "X"}}})
+    store.set("deletionRequests/parti", {"uid": "parti"})
+
+    assert purge_deleted_accounts(store, NIGHT) == 1
+    assert store.get("contestPlayers/parti") is None
+    assert all(store.get(f"contests/{DATE}/picks/parti_{fid}") is None for fid in ids)
+    assert store.get(f"contests/{DATE}/picks/reste_{ids[0]}") is not None
+    assert set(store.get(f"contestScores/{DATE}")["players"]) == {"reste"}
+    week = store.get("leaderboards/week-2026-W42")["players"]
+    assert [(p["uid"], p["rank"]) for p in week] == [("reste", 1)]
+    assert store.get("moderation/all")["players"] == {}
+    assert store.get("deletionRequests/parti") is None
+    assert purge_deleted_accounts(store, NIGHT) == 0

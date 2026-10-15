@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Buteo · Supprimer mon compte</title>
+  <meta name="description" content="Supprimer ton compte Buteo et les données qui y sont rattachées.">
+  <meta name="theme-color" content="#0A1230">
+  <link rel="icon" href="icone.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="suppression.js"></script>
+</head>
+<body>
+  <header class="top">
+    <a href="/"><img src="logo.svg" alt="Buteo" class="logo" width="146" height="50"></a>
+    <span class="secure">Compte</span>
+  </header>
+
+  <main>
+    <section class="card">
+      <h1>Supprimer mon compte Buteo</h1>
+      <p class="muted">Seront effacés : ton profil (équipes suivies, réglages, pseudo), ton journal de
+      paris, et, sous 48 heures, tes pronos et tes points du concours. Une formule en cours est
+      perdue. Les justificatifs d'achat sont gardés le temps exigé par la loi.</p>
+      <p class="muted small">Tu peux aussi le faire dans l'app : Profil → Supprimer mon compte.</p>
+
+      <div id="etape-connexion">
+        <p class="small">Connecte-toi avec le compte Google utilisé dans l'app.</p>
+        <button id="connexion" class="btn btn-light" type="button">Continuer avec Google</button>
+      </div>
+
+      <div id="etape-confirmation" hidden>
+        <p>Compte : <strong id="email"></strong></p>
+        <button id="supprimer" class="btn btn-danger" type="button">Supprimer définitivement</button>
+        <button id="changer" class="btn btn-ghost" type="button">Utiliser un autre compte</button>
+      </div>
+
+      <p id="resultat" role="status"></p>
+    </section>
+  </main>
+
+  <footer class="muted small center">
+    <p><a href="confidentialite.html">Politique de confidentialité</a></p>
+  </footer>
+</body>
+</html>

@@ -52,7 +52,8 @@ jobs:
 
       - name: Construction de l'APK
         run: |
-          flutter build apk --release
+          # Numéro de version croissant à chaque construction (exigé par Google Play).
+          flutter build apk --release --build-number=$((100 + GITHUB_RUN_NUMBER))
           cp build/app/outputs/flutter-apk/app-release.apk build/buteo-test.apk
 
       - name: Garder l'APK avec cette exécution
@@ -71,7 +72,7 @@ jobs:
           BUTEO_UPLOAD_KEY_ALIAS: upload
         run: |
           echo "$ANDROID_UPLOAD_KEYSTORE" | base64 -d > "$RUNNER_TEMP/upload.jks"
-          BUTEO_UPLOAD_KEYSTORE="$RUNNER_TEMP/upload.jks" flutter build appbundle --release
+          BUTEO_UPLOAD_KEYSTORE="$RUNNER_TEMP/upload.jks" flutter build appbundle --release --build-number=$((100 + GITHUB_RUN_NUMBER))
           rm "$RUNNER_TEMP/upload.jks"
 
       - name: Garder le paquet Play Store

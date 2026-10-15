@@ -4,7 +4,7 @@
   "description": "Site de paiement de Buteo : Mobile Money et crypto",
   "type": "module",
   "scripts": {
-    "build": "esbuild src/main.js --bundle --minify --format=esm --target=es2020 --outfile=public/app.js && esbuild src/admin.js --bundle --minify --format=esm --target=es2020 --outfile=public/admin.js"
+    "build": "esbuild src/main.js --bundle --minify --format=esm --target=es2020 --outfile=public/app.js && esbuild src/admin.js --bundle --minify --format=esm --target=es2020 --outfile=public/admin.js && esbuild src/suppression.js --bundle --minify --format=esm --target=es2020 --outfile=public/suppression.js"
   },
   "dependencies": {
     "firebase": "^13.0.0"

@@ -136,3 +136,14 @@ h2.flat { margin: 0 0 6px; }
 .board .who { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .board .pts { color: var(--muted); font-size: 13px; }
 .link.danger { color: var(--loss); }
+
+/* Pages de texte (confidentialité) et suppression de compte */
+.doc { padding-bottom: 12px; }
+.doc h1 { margin-top: 12px; }
+.doc h2 { font-size: 17px; margin: 22px 0 6px; }
+.doc p, .doc li { color: var(--fg); }
+.doc ul { padding-left: 20px; }
+.doc li { margin: 6px 0; }
+a { color: var(--win); }
+.btn-danger { background: var(--loss); color: #2a0610; }
+.status { color: var(--win); }
