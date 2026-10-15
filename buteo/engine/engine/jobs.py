@@ -221,7 +221,7 @@ def stored_history(store: Store, league_id: int) -> list[model.Result]:
 def free_reserve(now: datetime) -> int:
     """Requêtes à garder pour suivre les résultats jusqu'à minuit (le quota repart à 00:00 GMT).
 
-    À 23:35, quelques-unes suffisent ; une publication lancée à la main dans la
+    En fin de soirée, quelques-unes suffisent ; une publication lancée à la main dans la
     journée laisse de quoi lire les résultats toutes les 20 minutes jusqu'au soir.
     """
     minutes_left = 24 * 60 - (now.hour * 60 + now.minute)
