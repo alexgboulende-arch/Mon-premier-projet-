@@ -9,7 +9,7 @@ from datetime import date as Date
 from datetime import datetime, timedelta, timezone
 
 from . import api_football as api
-from . import model
+from . import contest, model
 from .markets import bookmaker_odds
 from .notify import Notifier
 from .picks import SETTLED, day_stats, doc_status, rubric_doc, tip_update
@@ -117,9 +117,9 @@ def publish(client: api.ApiFootball, store: Store, date: str, now: datetime) -> 
         if f["league"]["id"] in by_id and f["fixture"]["status"]["short"] in api.NOT_STARTED
     ]
     budget = None
+    priority = {lg["id"]: i for i, lg in enumerate(leagues)}
     if free:
         # Quota limité : les championnats passent dans l'ordre de la liste, les premiers d'abord.
-        priority = {lg["id"]: i for i, lg in enumerate(leagues)}
         fixtures.sort(key=lambda f: (priority[f["league"]["id"]], f["fixture"]["date"]))
         budget = client.remaining() - free_reserve(now)
     log.info("%d matchs suivis le %s%s", len(fixtures), date, f" (offre gratuite, {budget} cotes au plus)" if free else "")
@@ -128,6 +128,7 @@ def publish(client: api.ApiFootball, store: Store, date: str, now: datetime) -> 
     known: dict[int, tuple[int, Counter]] = {}  # matchs connus par championnat et par équipe
     teams: dict[int, set[str]] = {}
     pool: list[Candidate] = []
+    contest_pool: list[tuple[int, Fixture, dict[str, float]]] = []
     skipped = 0
     for f in fixtures:
         league_id = f["league"]["id"]
@@ -155,7 +156,9 @@ def publish(client: api.ApiFootball, store: Store, date: str, now: datetime) -> 
         lam_h, lam_a = strengths[league_id].expected_goals(home, away)
         fixture = Fixture(f["fixture"]["id"], lg["name"], lg["country"], home, away, _utc(f["fixture"]["date"]))
         weight = model_weight(*known[league_id], home, away)
-        pool += candidates(fixture, model.market_probabilities(lam_h, lam_a), bookmaker_odds(bookmakers), weight)
+        odds = bookmaker_odds(bookmakers)
+        pool += candidates(fixture, model.market_probabilities(lam_h, lam_a), odds, weight)
+        contest_pool.append((priority[league_id], fixture, odds))
     if skipped:
         log.info("Quota du jour atteint : %d matchs sans cotes ignorés", skipped)
 
@@ -163,6 +166,7 @@ def publish(client: api.ApiFootball, store: Store, date: str, now: datetime) -> 
     _save_teams(store, by_id, teams, now)
     for rubric, items in chosen.items():
         store.set(f"picks/{date}_{rubric}", rubric_doc(rubric, date, items, now))
+    contest.publish_contest(store, date, contest_pool, now)
     cfg = store.get("config/engine") or {}
     store.set(
         "config/engine",
@@ -249,6 +253,7 @@ def update_results(client: api.ApiFootball, store: Store, now: datetime, notifie
                 for t in d.get("tips", [])
                 if t["status"] not in SETTLED and _utc(t["kickoff"]) <= now
             }
+            | contest.pending_ids(store.get(f"contests/{date}"), now)
         )
         if not pending:
             continue
@@ -276,6 +281,7 @@ def update_results(client: api.ApiFootball, store: Store, now: datetime, notifie
                 notifier.on_change(doc, before, old_status)
         if touched:
             _update_summary(store, date, now)
+        contest.update_contest(store, date, fixtures, now)
     return changed_total
 
 

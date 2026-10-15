@@ -4,7 +4,9 @@ Documents écrits par le moteur (lus par l'app, voir firebase/firestore.rules) :
 
 - `picks/{date}_{rubrique}` : les pronos d'une rubrique pour une journée ;
 - `stats/summary` : résultats agrégés par jour et par rubrique (30 jours) ;
-- `config/engine` : état du moteur (championnats, dernière publication).
+- `config/engine` : état du moteur (championnats, dernière publication) ;
+- `history/{championnat}` : résultats gardés par le moteur (offre gratuite) ;
+- concours : voir contest.py.
 """
 
 from __future__ import annotations
@@ -22,6 +24,8 @@ class Store(Protocol):
     def set(self, path: str, data: dict) -> None: ...
 
     def query_picks(self, date: str) -> dict[str, dict]: ...
+
+    def list(self, collection: str) -> dict[str, dict]: ...
 
 
 class MemoryStore:
@@ -42,6 +46,15 @@ class MemoryStore:
             path.split("/", 1)[1]: copy.deepcopy(doc)
             for path, doc in self.docs.items()
             if path.startswith("picks/") and doc.get("date") == date
+        }
+
+    def list(self, collection: str) -> dict[str, dict]:
+        """Documents d'une collection (sans les sous-collections)."""
+        prefix = collection.rstrip("/") + "/"
+        return {
+            path[len(prefix) :]: copy.deepcopy(doc)
+            for path, doc in self.docs.items()
+            if path.startswith(prefix) and "/" not in path[len(prefix) :]
         }
 
 
@@ -68,6 +81,9 @@ class FirestoreStore:
 
     def query_picks(self, date: str) -> dict[str, dict]:
         return {snap.id: snap.to_dict() for snap in self._db.collection("picks").where("date", "==", date).stream()}
+
+    def list(self, collection: str) -> dict[str, dict]:
+        return {snap.id: snap.to_dict() for snap in self._db.collection(collection).stream()}
 
 
 class BadServiceAccount(RuntimeError):
