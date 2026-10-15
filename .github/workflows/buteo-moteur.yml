@@ -6,7 +6,7 @@ name: Buteo – moteur de pronostics
 # s'arrête sans rien faire.
 on:
   schedule:
-    - cron: '35 23 * * *'       # pronos du lendemain, prêts pour 00:00 GMT
+    - cron: '5 23 * * *'        # pronos du lendemain, prêts pour 00:00 GMT (GitHub a souvent 20 min de retard)
     - cron: '*/10 11-23 * * *'  # résultats pendant les matchs
     - cron: '*/10 0-1 * * *'    # matchs terminés après minuit
   workflow_dispatch:
@@ -141,7 +141,7 @@ jobs:
     env:
       API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
       FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-      TACHE: ${{ github.event.schedule == '35 23 * * *' && 'publier' || inputs.tache || 'resultats' }}
+      TACHE: ${{ github.event.schedule == '5 23 * * *' && 'publier' || inputs.tache || 'resultats' }}
       DATE_DEMANDEE: ${{ inputs.date }}
     steps:
       - uses: actions/checkout@v5

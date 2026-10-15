@@ -19,6 +19,13 @@ from . import markets
 # d'information : le modèle sert surtout à repérer les écarts.
 MODEL_WEIGHT = 0.35
 
+# Paris nettement défavorables écartés : valeur inférieure à -4 % avec le modèle
+# complet. Sans modèle (offre gratuite, historique encore vide), la probabilité
+# est celle des bookmakers et la valeur vaut exactement moins leur marge : on
+# tolère alors une marge ordinaire, jusqu'à 6 points de plus.
+VALUE_FLOOR = -0.04
+BOOKMAKER_MARGIN = 0.06
+
 
 @dataclass(frozen=True)
 class Fixture:
@@ -36,6 +43,7 @@ class Candidate:
     market: str
     odds: float
     probability: float  # probabilité retenue (modèle + bookmakers)
+    model_weight: float = MODEL_WEIGHT  # part du modèle dans cette probabilité
 
     @property
     def value(self) -> float:
@@ -89,7 +97,7 @@ def candidates(
 ) -> list[Candidate]:
     probabilities = blend(model, markets.market_probabilities_from_odds(odds), model_weight)
     return [
-        Candidate(fixture, code, odds[code], probabilities[code])
+        Candidate(fixture, code, odds[code], probabilities[code], model_weight)
         for code in odds
         if code in probabilities and (code in markets.LABELS or code.startswith("cs:"))
     ]
@@ -102,8 +110,14 @@ def _eligible(rule: Rule, pool: list[Candidate]) -> list[Candidate]:
         for c in pool
         if c.market in rule.markets and lo <= c.odds <= hi and c.probability >= rule.min_probability
         # On écarte les paris nettement défavorables, même dans les rubriques « sûres ».
-        and c.value >= -0.04
+        and c.value >= value_floor(c.model_weight)
     ]
+
+
+def value_floor(model_weight: float) -> float:
+    """Valeur minimale d'un pari, selon la part du modèle dans sa probabilité."""
+    without_model = 1 - min(model_weight, MODEL_WEIGHT) / MODEL_WEIGHT
+    return VALUE_FLOOR - BOOKMAKER_MARGIN * without_model
 
 
 def _best_per_fixture(items: list[Candidate], key) -> list[Candidate]:
