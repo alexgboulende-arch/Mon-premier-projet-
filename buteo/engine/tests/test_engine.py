@@ -384,3 +384,26 @@ def test_offre_gratuite_10_requetes_par_minute(monkeypatch):
     # Requêtes espacées de 6,5 s, et une minute d'attente à chaque refus.
     assert sleeps == [api_football.FREE_INTERVAL, 61, 61]
     assert session.paths == ["leagues", "fixtures", "fixtures", "fixtures"]
+
+
+def test_sans_modele_la_marge_des_bookmakers_n_ecarte_pas_tout():
+    """Historique vide : chaque pari vaut « moins la marge » ; il ne doit pas être écarté pour ça."""
+    from engine.selection import MODEL_WEIGHT, Candidate, Fixture, pick_singles, value_floor
+
+    assert value_floor(MODEL_WEIGHT) == pytest.approx(-0.04)
+    assert value_floor(0) == pytest.approx(-0.10)
+    fixture = Fixture(1, "Ligue Europa", "Europe", "A", "B", EVE)
+    # Favori à 1,50 avec une marge de 5 % : probabilité 0,635, valeur -4,8 %.
+    market_only = Candidate(fixture, "1", 1.50, 0.635, model_weight=0)
+    with_model = Candidate(fixture, "1", 1.50, 0.635)
+    assert pick_singles(RULES["selection"], [market_only]) == [market_only]
+    assert pick_singles(RULES["selection"], [with_model]) == []
+
+
+def test_offre_gratuite_publie_toutes_les_rubriques_possibles_sans_historique():
+    """Cotes réalistes (marge de 6 %) et aucun historique : les rubriques ne restent pas vides."""
+    store = MemoryStore()
+    api = SampleApi(DATE, free=True, limit=100)
+    chosen = jobs.publish(api, store, DATE, EVE)
+    filled = [r for r, items in chosen.items() if items]
+    assert len(filled) >= 6, filled
