@@ -236,8 +236,8 @@ export async function confirmOrder(
   });
 }
 
-/** Écrit l'accès acheté dans le profil. Renvoie ce qui a été donné, pour la commande. */
-function grant(
+/** Écrit l'accès acheté (ou offert) dans le profil. Renvoie ce qui a été donné, pour la commande. */
+export function grant(
   tx: Transaction,
   userRef: FirebaseFirestore.DocumentReference,
   profile: DocumentData | undefined,

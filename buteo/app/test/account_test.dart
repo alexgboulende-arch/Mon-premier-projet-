@@ -97,6 +97,7 @@ void main() {
 
     await state.deleteAccount();
     await flush();
+    expect(store.deletionRequests, ['u1']);
     expect(store.docs, isNot(contains('u1')));
     expect(auth.deleted, isTrue);
     expect(state.signedIn, isFalse);

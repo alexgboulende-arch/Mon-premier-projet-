@@ -3,7 +3,7 @@ description: "Buteo, pronostics sportifs."
 publish_to: 'none'
 
 # Version affichée (1.0.0) et numéro de build pour le Play Store (+1).
-version: 0.5.0+5
+version: 0.6.0+6
 
 environment:
   sdk: ^3.13.5

@@ -21,6 +21,18 @@ service cloud.firestore {
         && !request.resource.data.keys().hasAny(serverFields());
       allow update: if isOwner(uid)
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(serverFields());
+
+      // Journal de paris : privé, écrit par l'utilisateur lui-même.
+      match /journal/{entryId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && request.resource.data.keys().hasOnly(['id', 'day', 'label', 'odds', 'stake', 'status', 'updatedAt'])
+          && request.resource.data.id == entryId
+          && request.resource.data.label is string && request.resource.data.label.size() <= 120
+          && request.resource.data.odds is number && request.resource.data.odds >= 1 && request.resource.data.odds <= 1000
+          && request.resource.data.stake is int && request.resource.data.stake > 0 && request.resource.data.stake <= 10000000
+          && request.resource.data.status in ['pending', 'won', 'lost', 'refunded'];
+      }
     }
 
     // Pronos publiés par le moteur. Gratuit : lisible par tous. VIP : réservé à la
@@ -41,6 +53,50 @@ service cloud.firestore {
       allow write: if false;
     }
     match /config/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Demande de suppression de compte (app ou site) : le moteur efface ensuite
+    // les données du concours rattachées au compte, chaque nuit.
+    match /deletionRequests/{uid} {
+      allow create, update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['uid', 'requestedAt'])
+        && request.resource.data.uid == uid;
+      allow read, delete: if false;
+    }
+
+    // Concours « Pronos du jour » : matchs publiés par le moteur, pronos des joueurs
+    // acceptés seulement avant le coup d'envoi (heure lue dans le concours).
+    match /contests/{date} {
+      allow read: if true;
+      allow write: if false;
+
+      match /picks/{pickId} {
+        allow read: if request.auth != null && resource.data.uid == request.auth.uid;
+        allow delete: if false;
+        allow create, update: if request.auth != null
+          && request.resource.data.keys().hasOnly(['uid', 'fixtureId', 'choice', 'pseudo', 'updatedAt'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.fixtureId is int
+          && pickId == request.auth.uid + '_' + string(request.resource.data.fixtureId)
+          && request.resource.data.choice in ['1', 'X', '2']
+          && request.resource.data.pseudo is string
+          && request.resource.data.pseudo.matches('^[\\p{L}\\p{N} ._-]{3,20}$')
+          && get(/databases/$(database)/documents/contests/$(date)).data.kickoffs[string(request.resource.data.fixtureId)] > request.time;
+      }
+    }
+
+    // Points, classements et badges du concours : publics, calculés par le moteur.
+    match /contestScores/{date} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /leaderboards/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /contestPlayers/{uid} {
       allow read: if true;
       allow write: if false;
     }

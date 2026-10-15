@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'data/contest.dart';
 import 'data/tips_repository.dart';
 import 'state/app_state.dart';
 import 'theme/theme.dart';
@@ -11,11 +12,15 @@ class ButeoApp extends StatelessWidget {
     super.key,
     required this.state,
     required this.repository,
+    this.contest,
     this.splashDuration = const Duration(milliseconds: 1400),
   });
 
   final AppState state;
   final TipsRepository repository;
+
+  /// Concours ; par défaut, celui de démonstration tiré des pronos simulés.
+  final ContestRepository? contest;
   final Duration splashDuration;
 
   @override
@@ -23,6 +28,7 @@ class ButeoApp extends StatelessWidget {
     return AppScope(
       state: state,
       repository: repository,
+      contest: contest ?? MemoryContestRepository.demo(repository),
       child: ListenableBuilder(
         listenable: state,
         builder: (context, _) => MaterialApp(

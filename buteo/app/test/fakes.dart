@@ -58,6 +58,11 @@ class FakeUserStore implements UserStore {
 
   @override
   Future<void> delete(String uid) async => docs.remove(uid);
+
+  final deletionRequests = <String>[];
+
+  @override
+  Future<void> requestDeletion(String uid) async => deletionRequests.add(uid);
 }
 
 class FakeNotificationService implements NotificationService {

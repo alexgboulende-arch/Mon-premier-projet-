@@ -4,7 +4,7 @@
   "description": "Règles de sécurité Firestore de Buteo et leurs tests",
   "type": "module",
   "scripts": {
-    "test": "firebase emulators:exec --only firestore --project buteo-test \"node tests/profils.test.mjs && node tests/pronos.test.mjs\""
+    "test": "firebase emulators:exec --only firestore --project buteo-test \"node tests/profils.test.mjs && node tests/pronos.test.mjs && node tests/concours.test.mjs\""
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^4.0.0",

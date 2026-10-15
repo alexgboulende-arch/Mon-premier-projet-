@@ -407,3 +407,130 @@ def test_offre_gratuite_publie_toutes_les_rubriques_possibles_sans_historique():
     chosen = jobs.publish(api, store, DATE, EVE)
     filled = [r for r, items in chosen.items() if items]
     assert len(filled) >= 6, filled
+
+
+# --- Concours « Pronos du jour » ---------------------------------------------------
+
+
+def _pick(store, uid, fixture_id, choice, pseudo):
+    """Ce que l'app écrit quand un joueur choisit 1, N ou 2."""
+    store.set(f"contests/{DATE}/picks/{uid}_{fixture_id}", {"uid": uid, "fixtureId": fixture_id, "choice": choice, "pseudo": pseudo})
+
+
+def test_concours_publie_5_matchs_des_championnats_prioritaires(published):
+    _, store, _ = published
+    doc = store.get(f"contests/{DATE}")
+    assert len(doc["matches"]) == 5 and doc["status"] == "open"
+    assert {m["league"] for m in doc["matches"]} == {"Ligue 1"}  # France et Côte d'Ivoire, à tour de rôle
+    assert {m["country"] for m in doc["matches"]} == {"France", "Côte d'Ivoire"}
+    kickoffs = [m["kickoff"] for m in doc["matches"]]
+    assert kickoffs == sorted(kickoffs)
+    for m in doc["matches"]:
+        assert set(m["odds"]) == {"1", "X", "2"} and m["result"] is None
+        assert doc["kickoffs"][str(m["fixtureId"])].isoformat().startswith(DATE)
+
+
+def test_concours_republie_garde_les_matchs_deja_joues(published):
+    api, store, _ = published
+    before = store.get(f"contests/{DATE}")["matches"]
+    jobs.publish(api, store, DATE, EVE + timedelta(minutes=5))
+    assert store.get(f"contests/{DATE}")["matches"] == before
+
+
+def test_concours_points_classements_et_badges(published):
+    api, store, _ = published
+    matches = store.get(f"contests/{DATE}")["matches"]
+    ids = [m["fixtureId"] for m in matches]
+    # Résultats tirés d'avance (même tirage que celui que verra le moteur).
+    played = {f["fixture"]["id"]: f for f in api.fixtures_by_ids(ids)}
+    results = {}
+    for fid, f in played.items():
+        h, a = f["score"]["fulltime"]["home"], f["score"]["fulltime"]["away"]
+        results[fid] = "1" if h > a else "2" if a > h else "X"
+    wrong = {"1": "2", "X": "1", "2": "X"}
+    for fid in ids:
+        _pick(store, "parfait", fid, results[fid], "Sans Faute")
+        _pick(store, "moyen", fid, results[fid] if fid in ids[:2] else wrong[results[fid]], "Moyen")
+        _pick(store, "exclu", fid, results[fid], "Tricheur")
+    store.set("moderation/all", {"players": {"exclu": {"excluded": True}, "moyen": {"pseudo": "Joueur 2"}}})
+
+    jobs.update_results(api, store, NIGHT, Notifier())
+
+    contest_doc = store.get(f"contests/{DATE}")
+    assert contest_doc["status"] == "done"
+    assert [m["result"] for m in contest_doc["matches"]] == [results[f] for f in ids]
+    scores = store.get(f"contestScores/{DATE}")["players"]
+    assert set(scores) == {"parfait", "moyen"}
+    odds = {m["fixtureId"]: m["odds"] for m in matches}
+    expected = sum(round(odds[f][results[f]] * 10) for f in ids)
+    assert scores["parfait"] == {"pseudo": "Sans Faute", "points": expected, "correct": 5, "played": 5, "perfect": True}
+    assert scores["moyen"]["correct"] == 2 and scores["moyen"]["pseudo"] == "Joueur 2"
+    assert not scores["moyen"]["perfect"]
+
+    week = store.get("leaderboards/week-2026-W42")
+    assert [p["uid"] for p in week["players"]] == ["parfait", "moyen"]
+    assert [p["rank"] for p in week["players"]] == [1, 2]
+    assert store.get("leaderboards/month-2026-10")["players"][0]["points"] == expected
+    profile = store.get("contestPlayers/parfait")
+    assert profile["week"] == {"period": "2026-W42", "points": expected, "rank": 1, "correct": 5, "played": 5}
+    assert profile["perfectDays"] == [DATE]
+    assert "perfectDays" not in store.get("contestPlayers/moyen")
+
+
+def test_concours_podium_de_la_semaine_precedente(published):
+    from engine import contest
+
+    _, store, _ = published
+    board = [{"uid": u, "pseudo": u, "points": p, "correct": 3, "played": 5, "days": 2, "rank": r} for r, (u, p) in enumerate([("a", 90), ("b", 70), ("c", 50), ("d", 10)], 1)]
+    store.set("leaderboards/week-2026-W41", {"period": "2026-W41", "players": board})
+    contest.update_leaderboards(store, DATE, NIGHT)
+    assert store.get("contestPlayers/a")["championWeeks"] == ["2026-W41"]
+    assert store.get("contestPlayers/c")["podiumWeeks"] == ["2026-W41"]
+    assert store.get("contestPlayers/d") is None
+    assert store.get("leaderboards/week-2026-W41")["final"] is True
+    # Une seule fois.
+    contest.update_leaderboards(store, DATE, NIGHT)
+    assert store.get("contestPlayers/a")["championWeeks"] == ["2026-W41"]
+
+
+def test_concours_resultat_d_un_match():
+    from engine.contest import match_state
+
+    assert match_state(_fixture("FT", 90, goals=(2, 1), full=(2, 1))) == ("1", {"home": 2, "away": 1})
+    assert match_state(_fixture("AET", 120, goals=(2, 1), full=(1, 1))) == ("X", {"home": 1, "away": 1})
+    assert match_state(_fixture("PST")) == ("void", None)
+    assert match_state(_fixture("2H", 70, goals=(0, 1))) == (None, {"home": 0, "away": 1})
+    assert match_state(_fixture("NS")) == (None, None)
+
+
+def test_liste_d_une_collection_sans_ses_sous_collections():
+    store = MemoryStore()
+    store.set("contests/2026-10-14", {"a": 1})
+    store.set("contests/2026-10-14/picks/u1_1", {"b": 2})
+    assert store.list("contests") == {"2026-10-14": {"a": 1}}
+    assert store.list("contests/2026-10-14/picks") == {"u1_1": {"b": 2}}
+
+
+def test_compte_supprime_retire_du_concours(published):
+    from engine.purge import purge_deleted_accounts
+
+    api, store, _ = published
+    ids = [m["fixtureId"] for m in store.get(f"contests/{DATE}")["matches"]]
+    for uid in ("parti", "reste"):
+        for fid in ids:
+            _pick(store, uid, fid, "1", uid.capitalize())
+    jobs.update_results(api, store, NIGHT, Notifier())
+    assert "parti" in store.get(f"contestScores/{DATE}")["players"]
+    store.set("moderation/all", {"players": {"parti": {"pseudo": "X"}}})
+    store.set("deletionRequests/parti", {"uid": "parti"})
+
+    assert purge_deleted_accounts(store, NIGHT) == 1
+    assert store.get("contestPlayers/parti") is None
+    assert all(store.get(f"contests/{DATE}/picks/parti_{fid}") is None for fid in ids)
+    assert store.get(f"contests/{DATE}/picks/reste_{ids[0]}") is not None
+    assert set(store.get(f"contestScores/{DATE}")["players"]) == {"reste"}
+    week = store.get("leaderboards/week-2026-W42")["players"]
+    assert [(p["uid"], p["rank"]) for p in week] == [("reste", 1)]
+    assert store.get("moderation/all")["players"] == {}
+    assert store.get("deletionRequests/parti") is None
+    assert purge_deleted_accounts(store, NIGHT) == 0

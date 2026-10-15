@@ -11,6 +11,9 @@ abstract class UserStore {
   Future<void> save(String uid, Map<String, dynamic> data);
 
   Future<void> delete(String uid);
+
+  /// Demande au moteur d'effacer les données du concours rattachées au compte.
+  Future<void> requestDeletion(String uid);
 }
 
 class NoUserStore implements UserStore {
@@ -24,6 +27,9 @@ class NoUserStore implements UserStore {
 
   @override
   Future<void> delete(String uid) async {}
+
+  @override
+  Future<void> requestDeletion(String uid) async {}
 }
 
 class FirestoreUserStore implements UserStore {
@@ -43,4 +49,10 @@ class FirestoreUserStore implements UserStore {
 
   @override
   Future<void> delete(String uid) => _users.doc(uid).delete();
+
+  @override
+  Future<void> requestDeletion(String uid) => FirebaseFirestore.instance.doc('deletionRequests/$uid').set({
+    'uid': uid,
+    'requestedAt': FieldValue.serverTimestamp(),
+  });
 }

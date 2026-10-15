@@ -10,6 +10,7 @@ import '../../theme/theme.dart';
 import '../widgets/common.dart';
 import '../widgets/sheets.dart';
 import 'favorites_screen.dart';
+import 'journal_screen.dart';
 import 'login.dart';
 import 'splash_screen.dart';
 
@@ -89,6 +90,25 @@ class ProfileScreen extends StatelessWidget {
               ],
             ),
           ),
+        section(
+          'Mes paris',
+          Panel(
+            child: ListenableBuilder(
+              listenable: state.journal,
+              builder: (context, _) {
+                final stats = state.journal.stats;
+                return _Row(
+                  icon: Icons.menu_book_outlined,
+                  title: 'Journal de paris',
+                  subtitle: stats.count == 0
+                      ? 'Suis tes gains et tes pertes'
+                      : '${stats.count} pari${stats.count > 1 ? 's' : ''} · ${signedFcfa(stats.profit)}',
+                  onTap: () => openJournal(context),
+                );
+              },
+            ),
+          ),
+        ),
         section(
           'Mes équipes',
           Panel(
@@ -217,7 +237,7 @@ class ProfileScreen extends StatelessWidget {
             ),
           ),
         const SizedBox(height: 18),
-        Center(child: MutedText('Buteo 0.5', size: 11.5)),
+        Center(child: MutedText('Buteo 0.6', size: 11.5)),
       ],
     );
   }

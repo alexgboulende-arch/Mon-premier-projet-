@@ -50,6 +50,7 @@ jobs:
           EBILLING_SHARED_KEY: ${{ secrets.EBILLING_SHARED_KEY }}
           EBILLING_API_URL: ${{ vars.EBILLING_API_URL }}
           EBILLING_PORTAL_URL: ${{ vars.EBILLING_PORTAL_URL }}
+          BUTEO_ADMINS: ${{ vars.BUTEO_ADMINS }}
         run: |
           if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
             echo "::error::Secret FIREBASE_SERVICE_ACCOUNT manquant (voir le README de Buteo)."
@@ -62,7 +63,7 @@ jobs:
           ENV_FONCTIONS="functions/.env.$PROJET"
           trap 'rm -f "$GOOGLE_APPLICATION_CREDENTIALS" "$ENV_FONCTIONS"' EXIT
           : > "$ENV_FONCTIONS"
-          for VAR in NOWPAYMENTS_API_KEY NOWPAYMENTS_IPN_SECRET EBILLING_USERNAME EBILLING_SHARED_KEY EBILLING_API_URL EBILLING_PORTAL_URL; do
+          for VAR in NOWPAYMENTS_API_KEY NOWPAYMENTS_IPN_SECRET EBILLING_USERNAME EBILLING_SHARED_KEY EBILLING_API_URL EBILLING_PORTAL_URL BUTEO_ADMINS; do
             if [ -n "${!VAR}" ]; then printf '%s=%s\n' "$VAR" "${!VAR}" >> "$ENV_FONCTIONS"; fi
           done
           case "$CIBLE" in
