@@ -30,6 +30,16 @@ await check('modifier ses favoris quand le serveur a écrit la formule', assertS
 await check('changer la formule écrite par le serveur : refusé', assertFails(setDoc(doc(awa, 'users/awa'), { tier: 'elite' }, { merge: true })));
 await check('supprimer son profil', assertSucceeds(deleteDoc(doc(awa, 'users/awa'))));
 
+// Journal de paris : privé.
+const bet = { id: 'p1', day: '2026-10-15', label: 'Benfica – Celtic · Victoire Benfica', odds: 1.25, stake: 2000, status: 'pending', updatedAt: '2026-10-15T08:00:00Z' };
+await check('noter un pari dans son journal', assertSucceeds(setDoc(doc(awa, 'users/awa/journal/p1'), bet)));
+await check('relire son journal', assertSucceeds(getDoc(doc(awa, 'users/awa/journal/p1'))));
+await check("lire le journal d'un autre : refusé", assertFails(getDoc(doc(moussa, 'users/awa/journal/p1'))));
+await check("écrire dans le journal d'un autre : refusé", assertFails(setDoc(doc(moussa, 'users/awa/journal/p2'), { ...bet, id: 'p2' })));
+await check('mise négative : refusé', assertFails(setDoc(doc(awa, 'users/awa/journal/p3'), { ...bet, id: 'p3', stake: -5 })));
+await check('champ inconnu : refusé', assertFails(setDoc(doc(awa, 'users/awa/journal/p4'), { ...bet, id: 'p4', tier: 'elite' })));
+await check('effacer un pari', assertSucceeds(deleteDoc(doc(awa, 'users/awa/journal/p1'))));
+
 // Commandes du site : écrites par le serveur, lisibles seulement par leur auteur.
 await env.withSecurityRulesDisabled(async (ctx) => setDoc(doc(ctx.firestore(), 'orders/cmd1'), { uid: 'awa', status: 'pending', amount: 500 }));
 await check('suivre sa commande', assertSucceeds(getDoc(doc(awa, 'orders/cmd1'))));

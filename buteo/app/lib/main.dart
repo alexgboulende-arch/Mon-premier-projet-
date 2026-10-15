@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
 import 'data/contest.dart';
+import 'data/journal.dart';
 import 'data/firestore_repository.dart';
 import 'data/tips_repository.dart';
 import 'services/ads_service.dart';
@@ -36,6 +37,7 @@ Future<void> main() async {
     demoMode: repository.isDemo,
     billing: billing ?? const UnavailableBillingService(),
     ads: ads,
+    journalRemote: online ? FirestoreJournalRemote() : const NoJournalRemote(),
   );
   state.onAccessChanged = repository.refreshAccess;
   repository.addListener(state.tick);

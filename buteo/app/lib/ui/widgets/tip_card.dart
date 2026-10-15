@@ -5,6 +5,7 @@ import '../../data/models.dart';
 import '../../data/tips_repository.dart';
 import '../../theme/theme.dart';
 import '../../util/format.dart';
+import '../screens/journal_screen.dart';
 import 'common.dart';
 
 IconData sportIcon(Sport s) => switch (s) {
@@ -81,12 +82,22 @@ class TipCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 StatusPill(status),
-                if (rubricName != null)
+                if (rubricName != null) ...[
+                  IconButton(
+                    tooltip: 'Ajouter au journal',
+                    onPressed: () => showJournalEntrySheet(
+                      context,
+                      label: '${tip.fixture.home} – ${tip.fixture.away} · ${tip.label}',
+                      odds: tip.odds,
+                    ),
+                    icon: Icon(Icons.menu_book_outlined, size: 20, color: c.muted),
+                  ),
                   IconButton(
                     tooltip: 'Partager',
                     onPressed: () => shareTip(tip, rubricName!),
                     icon: Icon(Icons.share_outlined, size: 20, color: c.muted),
                   ),
+                ],
               ],
             ),
           ),

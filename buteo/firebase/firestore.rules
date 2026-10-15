@@ -21,6 +21,18 @@ service cloud.firestore {
         && !request.resource.data.keys().hasAny(serverFields());
       allow update: if isOwner(uid)
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny(serverFields());
+
+      // Journal de paris : privé, écrit par l'utilisateur lui-même.
+      match /journal/{entryId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && request.resource.data.keys().hasOnly(['id', 'day', 'label', 'odds', 'stake', 'status', 'updatedAt'])
+          && request.resource.data.id == entryId
+          && request.resource.data.label is string && request.resource.data.label.size() <= 120
+          && request.resource.data.odds is number && request.resource.data.odds >= 1 && request.resource.data.odds <= 1000
+          && request.resource.data.stake is int && request.resource.data.stake > 0 && request.resource.data.stake <= 10000000
+          && request.resource.data.status in ['pending', 'won', 'lost', 'refunded'];
+      }
     }
 
     // Pronos publiés par le moteur. Gratuit : lisible par tous. VIP : réservé à la

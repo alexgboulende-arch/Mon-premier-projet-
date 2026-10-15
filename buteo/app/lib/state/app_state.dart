@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/contest.dart';
+import '../data/journal.dart';
 import '../data/models.dart';
 import '../data/tips_repository.dart';
 import '../services/ads_service.dart';
@@ -11,6 +12,7 @@ import '../services/auth_service.dart';
 import '../services/billing_service.dart';
 import '../services/notification_service.dart';
 import '../services/user_store.dart';
+import 'journal.dart';
 
 /// Réglages, favoris et accès de l'utilisateur.
 ///
@@ -27,7 +29,8 @@ class AppState extends ChangeNotifier {
     this.demoMode = true,
     this.billing = const UnavailableBillingService(),
     this.ads = const NoAdsService(),
-  }) {
+    JournalRemote journalRemote = const NoJournalRemote(),
+  }) : journal = Journal(_prefs, remote: journalRemote) {
     final saved = _prefs.getString(_kTier);
     _demoTier = Tier.values.firstWhere((t) => t.name == saved, orElse: () => Tier.free);
     _unlocked = {...?_prefs.getStringList(_kUnlocked)};
@@ -63,6 +66,9 @@ class AppState extends ChangeNotifier {
   final NotificationService notifier;
   final BillingService billing;
   final AdsService ads;
+
+  /// Journal de paris de l'utilisateur.
+  final Journal journal;
   StreamSubscription<Account?>? _accountSub;
   StreamSubscription<BillingEvent>? _billingSub;
   final _notices = StreamController<String>.broadcast();
@@ -243,6 +249,7 @@ class AppState extends ChangeNotifier {
   Future<void> deleteAccount() async {
     final uid = account?.uid;
     if (uid == null) return;
+    await journal.deleteRemote(uid);
     await store.delete(uid);
     await auth.deleteAccount();
     await auth.signOut();
@@ -252,6 +259,7 @@ class AppState extends ChangeNotifier {
     final previous = account?.uid;
     account = a;
     if (a == null) {
+      journal.detach();
       serverTier = Tier.free;
       serverTierUntil = null;
       _serverCoupons = {};
@@ -287,6 +295,7 @@ class AppState extends ChangeNotifier {
     } catch (e) {
       debugPrint('Synchronisation du compte : $e');
     }
+    await journal.attach(a.uid);
   }
 
   /// Formule et coupons écrits par le serveur dans le profil.
