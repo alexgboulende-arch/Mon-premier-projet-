@@ -4,6 +4,7 @@
     python -m engine resultats                       met à jour les matchs en cours et terminés
     python -m engine essai     [--json fichier]      essai hors ligne avec des données simulées
     python -m engine diagnostic                      ce que permet la clé API-Football (forfait, cotes…)
+    python -m engine sources                         format des réponses de football-data.org et Highlightly
 
 `publier` et `resultats` lisent API_FOOTBALL_KEY et FIREBASE_SERVICE_ACCOUNT.
 Sans ces variables, ils s'arrêtent sans erreur (le dépôt peut tourner sans
@@ -55,8 +56,15 @@ def main(argv: list[str] | None = None) -> int:
     p_try.add_argument("--date", default="2026-10-14")
     p_try.add_argument("--json", help="écrit les documents produits dans ce fichier")
     sub.add_parser("diagnostic", help="ce que permet la clé API-Football")
+    sub.add_parser("sources", help="format des réponses de football-data.org et Highlightly")
     args = parser.parse_args(argv)
     now = datetime.now(timezone.utc)
+
+    if args.command == "sources":
+        from .sources import run as run_sources
+
+        run_sources(now)
+        return 0
 
     if args.command == "diagnostic":
         if not os.environ.get("API_FOOTBALL_KEY"):

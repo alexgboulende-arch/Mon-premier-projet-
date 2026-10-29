@@ -109,7 +109,8 @@ jobs:
       - run: npm run build
 
   # Lancé seulement quand le message du commit contient « [diagnostic] » :
-  # une dizaine de requêtes pour savoir ce que permet la clé API-Football.
+  # une dizaine de requêtes pour savoir ce que permet la clé API-Football,
+  # puis le format des réponses de football-data.org et Highlightly.
   diagnostic:
     name: Diagnostic de la clé API-Football
     if: github.event_name == 'push' && contains(github.event.head_commit.message, '[diagnostic]')
@@ -119,6 +120,8 @@ jobs:
         working-directory: buteo/engine
     env:
       API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+      FOOTBALL_DATA_KEY: ${{ secrets.FOOTBALL_DATA_KEY }}
+      HIGHLIGHTLY_API_KEY: ${{ secrets.HIGHLIGHTLY_API_KEY }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -128,6 +131,8 @@ jobs:
           cache-dependency-path: buteo/engine/requirements.txt
       - run: pip install -r requirements.txt
       - run: python -m engine diagnostic
+        continue-on-error: true
+      - run: python -m engine sources
 
   moteur:
     name: Pronos et résultats
