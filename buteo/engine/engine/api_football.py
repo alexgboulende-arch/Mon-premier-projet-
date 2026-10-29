@@ -140,7 +140,7 @@ class ApiFootball:
     def finished(self, league_id: int, season: int) -> list[dict]:
         return self.get("fixtures", league=league_id, season=season, status="FT-AET-PEN")
 
-    def fixtures_by_ids(self, ids: list[int]) -> list[dict]:
+    def fixtures_by_ids(self, ids: list[int], date: str | None = None) -> list[dict]:
         out: list[dict] = []
         for i in range(0, len(ids), 20):  # l'API accepte 20 identifiants par requête
             out.extend(self.get("fixtures", ids="-".join(map(str, ids[i : i + 20]))))

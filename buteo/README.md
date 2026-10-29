@@ -111,11 +111,16 @@ Méthode de connexion → Téléphone → Activer. Pour tester sans payer, ajout
 
 ## Activer les vrais pronos (étape 3)
 
-Le moteur tourne gratuitement sur GitHub Actions. Il lui faut deux clés,
+Le moteur tourne gratuitement sur GitHub Actions. Il lui faut ses clés,
 enregistrées comme **secrets** du dépôt (GitHub → Settings → Secrets and
 variables → Actions → New repository secret) :
 
-1. **`API_FOOTBALL_KEY`** : crée un compte sur
+0. **Sources gratuites** (utilisées en priorité) : `FOOTBALL_DATA_KEY`
+   ([football-data.org](https://www.football-data.org/client/register)),
+   `ODDS_API_KEY` ([the-odds-api.com](https://the-odds-api.com)) et
+   `HIGHLIGHTLY_API_KEY` ([highlightly.net](https://highlightly.net)).
+   **Faits** le 29 octobre 2026 ; voir `engine/README.md`.
+1. **`API_FOOTBALL_KEY`** (compte suspendu le 19 octobre 2026) : crée un compte sur
    [dashboard.api-football.com](https://dashboard.api-football.com), puis
    copie la clé (menu → Compte → Mon accès). **Fait** avec l'offre gratuite :
    le moteur tourne alors en mode économique (100 requêtes par jour, modèle

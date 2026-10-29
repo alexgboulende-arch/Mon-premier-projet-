@@ -43,7 +43,10 @@ def resolve_leagues(client: api.ApiFootball, store: Store, now: datetime) -> lis
     cfg = store.get("config/engine") or {}
     cached = cfg.get("leagues")
     resolved_at = cfg.get("leaguesResolvedAt")
-    if cached and resolved_at and now - _as_dt(resolved_at) < LEAGUES_TTL:
+    # Les identifiants dépendent de la source des données (API-Football ou sources gratuites).
+    source = getattr(client, "source", "api-football")
+    same_source = cfg.get("leaguesSource", "api-football") == source
+    if cached and resolved_at and same_source and now - _as_dt(resolved_at) < LEAGUES_TTL:
         return cached
 
     out = []
@@ -59,7 +62,7 @@ def resolve_leagues(client: api.ApiFootball, store: Store, now: datetime) -> lis
         if season is None:
             continue
         out.append({"id": found["league"]["id"], "season": season, "country": league.country, "name": league.name})
-    store.set("config/engine", {**cfg, "leagues": out, "leaguesResolvedAt": now})
+    store.set("config/engine", {**cfg, "leagues": out, "leaguesResolvedAt": now, "leaguesSource": source})
     return out
 
 
@@ -267,7 +270,7 @@ def update_results(client: api.ApiFootball, store: Store, now: datetime, notifie
             record_history(store, leagues, raw, now)
             fixtures = {f["fixture"]["id"]: f for f in raw if f["fixture"]["id"] in pending}
         else:
-            fixtures = {f["fixture"]["id"]: f for f in client.fixtures_by_ids(pending)}
+            fixtures = {f["fixture"]["id"]: f for f in client.fixtures_by_ids(pending, date)}
         touched = False
         for doc_id, doc in docs.items():
             new_tips = [tip_update(t, fixtures[t["fixtureId"]]) if t["fixtureId"] in fixtures else t for t in doc["tips"]]
