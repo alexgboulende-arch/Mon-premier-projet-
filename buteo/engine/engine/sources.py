@@ -1,4 +1,4 @@
-"""Sondage des nouvelles sources de données (football-data.org et Highlightly).
+"""Sondage des nouvelles sources de données (football-data.org, Highlightly, The Odds API).
 
 Quelques requêtes pour voir le format réel des réponses avant d'écrire les
 clients : chemin, code HTTP, quota restant, clés de la réponse et un exemple
@@ -15,13 +15,16 @@ import requests
 
 FOOTBALL_DATA = "https://api.football-data.org/v4"
 HIGHLIGHTLY = "https://soccer.highlightly.net"
+HIGHLIGHTLY_RAPIDAPI = "football-highlights-api.p.rapidapi.com"
+ODDS_API = "https://api.the-odds-api.com/v4"
 SAMPLE_CHARS = 3000
 
 
-def _show(session: requests.Session, base: str, path: str, **params) -> dict | list | None:
+def _show(session: requests.Session, base: str, path: str, secret: dict | None = None, **params) -> dict | list | None:
+    """`secret` : paramètres envoyés mais jamais affichés (clé passée dans l'adresse)."""
     print(f"\n### GET {path} {params}")
     try:
-        r = session.get(f"{base}{path}", params=params, timeout=30)
+        r = session.get(f"{base}{path}", params={**params, **(secret or {})}, timeout=30)
     except requests.RequestException as e:
         print(f"réseau : {e.__class__.__name__}")
         return None
@@ -66,20 +69,39 @@ def highlightly(key: str, now: datetime) -> None:
     print("\n## Highlightly")
     s = requests.Session()
     s.headers.update({"x-rapidapi-key": key})
-    today = now.date().isoformat()
-    yesterday = (now - timedelta(days=1)).date().isoformat()
-    _show(s, HIGHLIGHTLY, "/leagues", countryName="France", limit=10)
+    base = HIGHLIGHTLY
+    probe = _show(s, base, "/leagues", countryName="France", limit=10)
+    if isinstance(probe, dict) and probe.get("statusCode") == 401:
+        print("Clé refusée par highlightly.net : essai par RapidAPI.")
+        s.headers.update({"x-rapidapi-host": HIGHLIGHTLY_RAPIDAPI})
+        base = f"https://{HIGHLIGHTLY_RAPIDAPI}"
+        probe = _show(s, base, "/leagues", countryName="France", limit=10)
+    if not isinstance(probe, dict) or "data" not in probe:
+        return
     for country in ("Ivory Coast", "Senegal", "Morocco", "Cameroon"):
-        data = _show(s, HIGHLIGHTLY, "/leagues", countryName=country, limit=10)
+        data = _show(s, base, "/leagues", countryName=country, limit=10)
         if isinstance(data, dict):
             for lg in data.get("data", []):
                 print(f"  {lg.get('id')} {lg.get('name')}")
-    matches = _show(s, HIGHLIGHTLY, "/matches", date=today, timezone="UTC", limit=100)
-    _show(s, HIGHLIGHTLY, "/matches", date=yesterday, timezone="UTC", limit=5)
-    first = (matches or {}).get("data", []) if isinstance(matches, dict) else matches or []
+    today = now.date().isoformat()
+    yesterday = (now - timedelta(days=1)).date().isoformat()
+    matches = _show(s, base, "/matches", date=today, timezone="UTC", limit=100)
+    _show(s, base, "/matches", date=yesterday, timezone="UTC", limit=5)
+    first = matches.get("data", []) if isinstance(matches, dict) else []
     if first:
-        _show(s, HIGHLIGHTLY, "/odds", matchId=first[0].get("id"), oddsType="prematch")
-    _show(s, HIGHLIGHTLY, "/bookmakers", limit=5)
+        _show(s, base, "/odds", matchId=first[0].get("id"), oddsType="prematch")
+
+
+def odds_api(key: str) -> None:
+    print("\n## The Odds API")
+    s = requests.Session()
+    sports = _show(s, ODDS_API, "/sports", secret={"apiKey": key})  # gratuit, hors quota
+    if isinstance(sports, list):
+        for sp in sports:
+            if sp.get("group") == "Soccer":
+                print(f"  {sp.get('key')} · {sp.get('title')} · actif={sp.get('active')}")
+    # Une requête = toutes les cotes d'un championnat ; coût : 1 par marché et par région.
+    _show(s, ODDS_API, "/sports/soccer_france_ligue_one/odds", secret={"apiKey": key}, regions="eu", markets="h2h,totals", oddsFormat="decimal")
 
 
 def run(now: datetime) -> None:
@@ -89,6 +111,11 @@ def run(now: datetime) -> None:
     else:
         print("::notice::Secret FOOTBALL_DATA_KEY manquant.")
     if hl:
-        highlightly(hl, now)
+        highlightly(hl.strip(), now)
     else:
         print("::notice::Secret HIGHLIGHTLY_API_KEY manquant.")
+    odds = os.environ.get("ODDS_API_KEY")
+    if odds:
+        odds_api(odds.strip())
+    else:
+        print("::notice::Secret ODDS_API_KEY manquant.")
