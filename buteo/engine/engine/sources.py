@@ -104,8 +104,41 @@ def odds_api(key: str) -> None:
     _show(s, ODDS_API, "/sports/soccer_france_ligue_one/odds", secret={"apiKey": key}, regions="eu", markets="h2h,totals", oddsFormat="decimal")
 
 
+def details(fd_key: str | None, hl_key: str | None, now: datetime) -> None:
+    """Derniers formats à vérifier avant d'écrire les clients."""
+    if fd_key:
+        print("\n## football-data.org : recherche par identifiants")
+        s = requests.Session()
+        s.headers.update({"X-Auth-Token": fd_key})
+        _show(s, FOOTBALL_DATA, "/matches", ids="559715,559648")
+        _show(s, FOOTBALL_DATA, "/competitions/FL1/matches", season=2025, status="FINISHED")
+    if not hl_key:
+        return
+    print("\n## Highlightly : championnats et filtres")
+    s = requests.Session()
+    s.headers.update({"x-rapidapi-key": hl_key})
+    ids = {}
+    for params in ({"countryName": "France"}, {"countryName": "Belgium"}, {"leagueName": "UEFA Europa League"}):
+        data = _show(s, HIGHLIGHTLY, "/leagues", limit=20, **params)
+        for lg in (data or {}).get("data", []) if isinstance(data, dict) else []:
+            print(f"  {lg.get('id')} {lg.get('name')} ({(lg.get('country') or {}).get('name')})")
+            ids.setdefault(lg.get("name"), lg.get("id"))
+    league = ids.get("Ligue 2")
+    if league:
+        day = now.date()
+        for back in range(0, 7):  # dernier jour de match de Ligue 2
+            d = (day - timedelta(days=back)).isoformat()
+            data = _show(s, HIGHLIGHTLY, "/matches", leagueId=league, date=d, timezone="UTC")
+            if isinstance(data, dict) and data.get("data"):
+                break
+        _show(s, HIGHLIGHTLY, "/matches", leagueId=league, season=2026, limit=100)
+
+
 def run(now: datetime) -> None:
     fd, hl = os.environ.get("FOOTBALL_DATA_KEY"), os.environ.get("HIGHLIGHTLY_API_KEY")
+    if os.environ.get("SONDAGE") == "details":
+        details(fd, hl.strip() if hl else None, now)
+        return
     if fd:
         football_data(fd, now)
     else:

@@ -134,6 +134,8 @@ jobs:
       - run: python -m engine diagnostic
         continue-on-error: true
       - run: python -m engine sources
+        env:
+          SONDAGE: details
 
   moteur:
     name: Pronos et résultats
