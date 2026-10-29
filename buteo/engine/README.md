@@ -46,8 +46,11 @@ Le football couvre 10 rubriques. Basket, tennis et live viendront ensuite.
 - **Résultats** : toutes les 10 minutes pour football-data.org, toutes les
   20 minutes pour Highlightly, et seulement pour les championnats qui jouent
   ce jour-là (`config/sources`).
-- **Historique** : la saison en cours chez football-data.org ; aucun pour
-  Highlightly (quota), dont les pronos reposent alors sur les cotes.
+- **Historique** : la saison en cours chez football-data.org. Pour Highlightly
+  (Ligue 2, Pro League, Ligue Europa), la saison est lue en entier tous les
+  3 jours (3 ou 4 requêtes) et gardée dans Firestore
+  (`history/hl_{championnat}_{saison}`) ; les résultats lus pendant les
+  matchs s'y ajoutent entre deux.
 - **Sans cotes gratuites** : « Les deux marquent », « Mi-temps/Fin de match »
   et « Score exact » restent vides, ainsi que les championnats africains et la
   Ligue des champions CAF.

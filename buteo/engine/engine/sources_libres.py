@@ -2,8 +2,9 @@
 
 - football-data.org (FOOTBALL_DATA_KEY) : matchs, scores et historique de huit
   championnats (10 requêtes par minute, sans limite par jour) ;
-- Highlightly (HIGHLIGHTLY_API_KEY) : matchs et scores des championnats que
-  football-data.org ne couvre pas (100 requêtes par jour) ;
+- Highlightly (HIGHLIGHTLY_API_KEY) : matchs, scores et historique des
+  championnats que football-data.org ne couvre pas (100 requêtes par jour ;
+  l'historique est gardé dans Firestore, `history/hl_{championnat}_{saison}`) ;
 - The Odds API (ODDS_API_KEY) : cotes 1X2 et plus/moins de buts des
   bookmakers (500 requêtes par mois, une par championnat et par jour).
 
@@ -37,6 +38,9 @@ FD_INTERVAL = 6.5  # 10 requêtes par minute au plus
 HL_RESERVE = 5  # requêtes Highlightly gardées en fin de journée
 ODDS_RESERVE = 10  # crédits The Odds API gardés en fin de mois
 HL_EVERY_MINUTES = 20  # résultats Highlightly lus toutes les 20 minutes (quota du jour)
+HL_HISTORY_REFRESH = timedelta(days=3)  # saison en cours relue en entier tous les 3 jours
+HL_PAGE = 100  # matchs par page chez Highlightly
+HL_MAX_PAGES = 6
 # Les identifiants de matchs de Highlightly (plus d'un milliard) ne croisent pas
 # ceux de football-data.org (quelques centaines de milliers).
 HL_MIN_ID = 100_000_000
@@ -364,10 +368,12 @@ class SourcesLibres:
         return out
 
     def finished(self, league_id: int, season: int) -> list[dict]:
-        """Matchs terminés d'une saison. Highlightly : aucun (quota), le modèle suit alors les cotes."""
+        """Matchs terminés d'une saison (score à 90 minutes)."""
         src = BY_LEAGUE.get(league_id)
-        if src is None or src.provider != "fd":
+        if src is None:
             return []
+        if src.provider == "hl":
+            return [_stored_fixture(m, league_id, season) for m in self._hl_history(league_id, season)]
         data = self._fd(f"/competitions/{src.code}/matches", season=season, status="FINISHED")
         return [fd_fixture(m) for m in data.get("matches", [])]
 
@@ -382,7 +388,9 @@ class SourcesLibres:
         if hl_ids and date and self._now().minute % HL_EVERY_MINUTES < 10:
             for league_id in self._hl_day(date):
                 data = self._hl("/matches", leagueId=league_id, date=date, timezone="UTC")
-                out += [hl_fixture(m) for m in (data or {}).get("data", []) if m.get("id") in hl_ids]
+                day = [hl_fixture(m) for m in (data or {}).get("data", [])]
+                self._hl_record(league_id, day)
+                out += [f for f in day if f["fixture"]["id"] in hl_ids]
         return out
 
     def odds(self, fixture_id: int) -> list[dict]:
@@ -437,6 +445,63 @@ class SourcesLibres:
         self._events[sport] = r.json()
         return self._events[sport]
 
+    def _hl_history(self, league_id: int, season: int) -> list[dict]:
+        """Matchs terminés d'une saison Highlightly, gardés dans Firestore.
+
+        La saison en cours est relue en entier tous les 3 jours (3 ou 4 requêtes) ;
+        entre deux, les résultats lus pendant les matchs s'y ajoutent sans requête
+        de plus. Une saison passée n'est lue qu'une fois.
+        """
+        path = f"history/hl_{league_id}_{season}"
+        doc = self._store.get(path) if self._store is not None else None
+        now = self._now()
+        current = season >= season_of(now.date())
+        if doc and (not current or now - _as_dt(doc.get("fetchedAt")) < HL_HISTORY_REFRESH):
+            return doc.get("matches", [])
+        matches = self._hl_season(league_id, season)
+        if matches is None:  # quota du jour presque épuisé : on garde ce qu'on a
+            return (doc or {}).get("matches", [])
+        if self._store is not None:
+            name = next((n for (_, n), s in SOURCES.items() if s.league_id == league_id), str(league_id))
+            self._store.set(path, {"league": name, "season": season, "matches": matches, "fetchedAt": now})
+        return matches
+
+    def _hl_season(self, league_id: int, season: int) -> list[dict] | None:
+        """Tous les matchs terminés d'une saison, page par page (None si le quota manque)."""
+        found: dict[int, dict] = {}
+        seen: set[int] = set()
+        for page in range(HL_MAX_PAGES):
+            data = self._hl("/matches", leagueId=league_id, season=season, limit=HL_PAGE, offset=page * HL_PAGE)
+            if data is None:
+                return None
+            items = data.get("data", [])
+            ids = {m.get("id") for m in items}
+            if not items or ids <= seen:  # page vide, ou la même page renvoyée : on s'arrête
+                break
+            seen |= ids
+            found.update({m["id"]: m for m in (_stored(f) for f in map(hl_fixture, items) if f["fixture"]["status"]["short"] in _DONE)})
+            total = (data.get("pagination") or {}).get("totalCount", 0)
+            if (page + 1) * HL_PAGE >= total:
+                break
+        log.info("Historique Highlightly %s (saison %s) : %d matchs joués sur %d lus", league_id, season, len(found), len(seen))
+        return sorted(found.values(), key=lambda m: m["played"])
+
+    def _hl_record(self, league_id: int, fixtures: list[dict]) -> None:
+        """Ajoute les matchs qui viennent de se terminer à l'historique de la saison en cours."""
+        done = [_stored(f) for f in fixtures if f["fixture"]["status"]["short"] in _DONE]
+        if not done or self._store is None:
+            return
+        season = fixtures[0]["league"].get("season") or season_of(self._now().date())
+        path = f"history/hl_{league_id}_{season}"
+        doc = self._store.get(path)
+        if not doc:
+            return  # pas encore d'historique : il sera lu en entier à la prochaine publication
+        by_id = {m["id"]: m for m in doc.get("matches", [])}
+        if all(m["id"] in by_id for m in done):
+            return
+        by_id.update({m["id"]: m for m in done})
+        self._store.set(path, {**doc, "matches": sorted(by_id.values(), key=lambda m: m["played"])})
+
     def _save_hl_day(self, date: str, leagues: list[int]) -> None:
         """Championnats Highlightly qui jouent ce jour-là, pour ne relire qu'eux pendant les matchs."""
         if self._store is None:
@@ -452,6 +517,35 @@ class SourcesLibres:
         if date in days:
             return days[date]
         return [s.league_id for s in SOURCES.values() if s.provider == "hl"]
+
+
+_DONE = {"FT", "AET", "PEN"}
+
+
+def _stored(f: dict) -> dict:
+    """Match terminé tel qu'il est gardé dans l'historique (score à 90 minutes)."""
+    full = f["score"]["fulltime"]
+    return {
+        "id": f["fixture"]["id"],
+        "home": f["teams"]["home"]["name"],
+        "away": f["teams"]["away"]["name"],
+        "hg": full["home"],
+        "ag": full["away"],
+        "played": f["fixture"]["date"][:19] + "Z",
+    }
+
+
+def _stored_fixture(m: dict, league_id: int, season: int) -> dict:
+    score = {"home": m["hg"], "away": m["ag"]}
+    return _fixture(m["id"], league_id, None, season, m["played"].replace("Z", "+00:00"), "FT", None, m["home"], m["away"], score, score, {"home": None, "away": None})
+
+
+def _as_dt(value) -> datetime:
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    if not value:
+        return datetime.min.replace(tzinfo=timezone.utc)
+    return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
 
 
 def _message(r: requests.Response) -> str:

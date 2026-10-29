@@ -176,6 +176,7 @@ class _Web:
     def __init__(self, fd_matches, fd_history, hl_matches, events, hl_left=90):
         self.fd_matches, self.fd_history, self.hl_matches, self.events = fd_matches, fd_history, hl_matches, events
         self.hl_left = hl_left
+        self.hl_season = []
         self.log = []
 
     def get(self, url, params=None, headers=None, timeout=None):
@@ -193,8 +194,13 @@ class _Web:
         if u.netloc == "soccer.highlightly.net":
             assert headers["x-rapidapi-key"] == "hl"
             self.hl_left -= 1
+            headers = {"x-ratelimit-requests-remaining": str(self.hl_left)}
+            if "season" in params:
+                season = [m for m in self.hl_season if m["league"]["id"] == params["leagueId"]]
+                page = season[params["offset"] : params["offset"] + params["limit"]]
+                return _Reply(200, {"data": page, "pagination": {"totalCount": len(season)}}, headers)
             data = [m for m in self.hl_matches if m["league"]["id"] == params["leagueId"]]
-            return _Reply(200, {"data": data}, {"x-ratelimit-requests-remaining": str(self.hl_left)})
+            return _Reply(200, {"data": data}, headers)
         if u.netloc == "api.the-odds-api.com":
             assert params["apiKey"] == "odds"
             sport = u.path.split("/")[3]
@@ -264,8 +270,11 @@ def test_publication_avec_les_sources_gratuites():
     # Une seule requête de cotes par championnat qui joue, aucune pour les autres.
     odds = [p for h, p, _ in web.log if h == "api.the-odds-api.com"]
     assert sorted(odds) == ["/v4/sports/soccer_france_ligue_one/odds", "/v4/sports/soccer_france_ligue_two/odds"]
-    # Highlightly : une requête par championnat qu'il couvre (Ligue 2, Pro League, Ligue Europa).
-    assert web.hosts().count("soccer.highlightly.net") == 3
+    # Highlightly : les matchs du jour de chaque championnat qu'il couvre (Ligue 2, Pro League,
+    # Ligue Europa), puis l'historique de la Ligue 2, qui joue (saison vide : la précédente aussi).
+    calls = _hl_calls(web)
+    assert [c["leagueId"] for c in calls if "date" in c] == [53546, 123328, 3337]
+    assert [(c["leagueId"], c["season"]) for c in calls if "season" in c] == [(53546, 2026), (53546, 2025)]
     assert store.get("config/sources")["highlightlyDays"][DATE] == [53546]
 
 
@@ -321,3 +330,84 @@ def test_la_ligne_de_commande_prend_les_sources_gratuites(monkeypatch):
     assert cli.main(["publier", "--date", DATE]) == 0
     assert isinstance(seen["client"], SourcesLibres)
     assert seen["client"]._hl_key == "hl"
+
+
+# --- Historique des championnats de Highlightly (Ligue 2…) ----------------------------
+
+
+def _l2_season(finished=150, upcoming=156):
+    """Saison de Ligue 2 dans le désordre, comme chez Highlightly : matchs joués et à venir."""
+    teams = ["Montpellier HSC", "RED Star FC 93", "Saint-Étienne", "Rodez", "Dunkerque", "Metz"]
+    out = []
+    start = datetime(2026, 8, 1, 18, 0, tzinfo=timezone.utc)
+    for i in range(finished + upcoming):
+        h, a = teams[i % 6], teams[(i + 1 + i // 6) % 6]
+        if h == a:
+            a = teams[(i + 2) % 6]
+        when = (start + timedelta(hours=10 * i)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+        if i < finished:
+            out.append(hl_match(1321000000 + i, h, a, when, "Finished", f"{2 if h == 'Metz' else 1} - 0", clock=90))
+        else:
+            out.append(hl_match(1321000000 + i, h, a, when))
+    return list(reversed(out))
+
+
+def _hl_calls(web):
+    return [p for h, _, p in web.log if h == "soccer.highlightly.net"]
+
+
+def test_historique_de_la_ligue_2_lu_page_par_page_et_garde():
+    store, web = MemoryStore(), _web()
+    web.hl_season = _l2_season()
+    games = SourcesLibres("fd", "odds", "hl", store=store, session=web, now=lambda: EVE).finished(53546, 2026)
+    assert len(games) == 150 and all(g["fixture"]["status"]["short"] == "FT" for g in games)
+    # 306 matchs : 4 pages de 100.
+    assert [p["offset"] for p in _hl_calls(web)] == [0, 100, 200, 300]
+    doc = store.get("history/hl_53546_2026")
+    assert doc["league"] == "Ligue 2" and len(doc["matches"]) == 150
+    assert doc["matches"][0]["played"] < doc["matches"][-1]["played"]
+    # Le modèle s'en sert : les forces des équipes sont connues.
+    assert {r.home for r in jobs._results(games)} >= {"Metz", "Rodez"}
+
+    web.log.clear()
+    two_days = EVE + timedelta(days=2)
+    SourcesLibres("fd", "odds", "hl", store=store, session=web, now=lambda: two_days).finished(53546, 2026)
+    assert _hl_calls(web) == []
+    four_days = EVE + timedelta(days=4)
+    SourcesLibres("fd", "odds", "hl", store=store, session=web, now=lambda: four_days).finished(53546, 2026)
+    assert len(_hl_calls(web)) == 4
+
+
+def test_saison_passee_lue_une_seule_fois():
+    store, web = MemoryStore(), _web()
+    web.hl_season = [dict(m, league={**m["league"], "season": 2025}) for m in _l2_season(finished=50, upcoming=0)]
+    later = EVE + timedelta(days=60)
+    for now in (EVE, later):
+        SourcesLibres("fd", "odds", "hl", store=store, session=web, now=lambda now=now: now).finished(53546, 2025)
+    assert len(_hl_calls(web)) == 1
+
+
+def test_resultats_du_soir_ajoutes_a_l_historique_sans_requete_de_plus():
+    store, web = MemoryStore(), _web()
+    web.hl_season = _l2_season()
+    client = _client(web, store)
+    client.finished(53546, 2026)
+    jobs.publish(client, store, DATE, EVE)
+    web.hl_matches[0]["state"] = {"clock": 90, "score": {"current": "3 - 1", "penalties": None}, "description": "Finished"}
+
+    web.log.clear()
+    night = datetime(2026, 10, 31, 22, 5, tzinfo=timezone.utc)
+    SourcesLibres("fd", "odds", "hl", store=store, session=web, now=lambda: night).fixtures_by_ids([1321200001], DATE)
+    assert len(_hl_calls(web)) == 1  # la lecture du soir, pas de relecture de la saison
+    added = [m for m in store.get("history/hl_53546_2026")["matches"] if m["id"] == 1321200001]
+    assert added == [{"id": 1321200001, "home": "Montpellier HSC", "away": "RED Star FC 93", "hg": 3, "ag": 1, "played": "2026-10-31T18:00:00Z"}]
+
+
+def test_historique_garde_si_le_quota_du_jour_manque():
+    store, web = MemoryStore(), _web(hl_left=6)
+    old = {"id": 1, "home": "Metz", "away": "Rodez", "hg": 1, "ag": 0, "played": "2026-09-01T18:00:00Z"}
+    store.set("history/hl_53546_2026", {"league": "Ligue 2", "season": 2026, "matches": [old], "fetchedAt": EVE - timedelta(days=5)})
+    web.hl_season = _l2_season()
+    games = _client(web, store).finished(53546, 2026)
+    # 6 → 5 : la deuxième page n'est pas lue, l'ancien historique reste.
+    assert len(games) == 1 and store.get("history/hl_53546_2026")["matches"] == [old]
