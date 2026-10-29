@@ -6,7 +6,14 @@ résultats pendant les matchs. Il tourne sur GitHub Actions
 
 ## Comment les pronos sont choisis
 
-1. **Données** : matchs, résultats et cotes viennent d'[API-Football](https://www.api-football.com).
+1. **Données** : par défaut, trois sources gratuites (`engine/sources_libres.py`) :
+   [football-data.org](https://www.football-data.org) pour les matchs, les
+   scores et l'historique de huit championnats, [Highlightly](https://highlightly.net)
+   pour la Ligue 2, la Pro League et la Ligue Europa, et
+   [The Odds API](https://the-odds-api.com) pour les cotes (1X2 et plus/moins
+   de buts ; la double chance est calculée à partir du 1X2). Sans leurs clés,
+   le moteur utilise [API-Football](https://www.api-football.com) (compte
+   suspendu depuis le 19 octobre 2026).
 2. **Modèle** (`engine/model.py`) : pour chaque championnat, la force
    d'attaque et de défense de chaque équipe est estimée sur ses résultats
    récents (un match d'il y a six mois compte moitié moins). On en tire la
@@ -24,6 +31,27 @@ résultats pendant les matchs. Il tourne sur GitHub Actions
    porte sur le score à 90 minutes ; un match annulé ne compte pas.
 
 Le football couvre 10 rubriques. Basket, tennis et live viendront ensuite.
+
+## Sources gratuites
+
+| Source | Secret | Rôle | Limite |
+|---|---|---|---|
+| football-data.org | `FOOTBALL_DATA_KEY` | Ligue 1, Premier League, LaLiga, Serie A, Bundesliga, Liga Portugal, Eredivisie, Ligue des champions | 10 requêtes par minute |
+| Highlightly | `HIGHLIGHTLY_API_KEY` | Ligue 2, Pro League, Ligue Europa | 100 requêtes par jour |
+| The Odds API | `ODDS_API_KEY` | Cotes des onze championnats | 500 crédits par mois |
+
+- **Cotes** : une requête (2 crédits) par championnat qui joue, à la
+  publication de la nuit. Les cotes sont rattachées aux matchs par l'heure du
+  coup d'envoi et le nom des équipes.
+- **Résultats** : toutes les 10 minutes pour football-data.org, toutes les
+  20 minutes pour Highlightly, et seulement pour les championnats qui jouent
+  ce jour-là (`config/sources`).
+- **Historique** : la saison en cours chez football-data.org ; aucun pour
+  Highlightly (quota), dont les pronos reposent alors sur les cotes.
+- **Sans cotes gratuites** : « Les deux marquent », « Mi-temps/Fin de match »
+  et « Score exact » restent vides, ainsi que les championnats africains et la
+  Ligue des champions CAF.
+- `python -m engine sources` montre ce que renvoie chaque source.
 
 ## Offre gratuite d'API-Football
 

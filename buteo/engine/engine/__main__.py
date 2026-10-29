@@ -4,11 +4,13 @@
     python -m engine resultats                       met à jour les matchs en cours et terminés
     python -m engine essai     [--json fichier]      essai hors ligne avec des données simulées
     python -m engine diagnostic                      ce que permet la clé API-Football (forfait, cotes…)
+    python -m engine sources                         format des réponses de football-data.org, Highlightly et The Odds API
 
-`publier` et `resultats` lisent API_FOOTBALL_KEY et FIREBASE_SERVICE_ACCOUNT.
-Sans ces variables, ils s'arrêtent sans erreur (le dépôt peut tourner sans
-clés tant que le service n'est pas souscrit). Avec l'offre gratuite
-d'API-Football, le moteur passe seul en mode économique (voir jobs.py).
+`publier` et `resultats` lisent FIREBASE_SERVICE_ACCOUNT et les clés des données :
+FOOTBALL_DATA_KEY et ODDS_API_KEY (plus HIGHLIGHTLY_API_KEY, facultative) pour les
+sources gratuites (voir sources_libres.py), sinon API_FOOTBALL_KEY. Sans ces
+variables, ils s'arrêtent sans erreur. Avec l'offre gratuite d'API-Football, le
+moteur passe seul en mode économique (voir jobs.py).
 """
 
 from __future__ import annotations
@@ -30,8 +32,14 @@ def _default_date(now: datetime) -> str:
     return (now + timedelta(days=1) if now.hour >= 20 else now).date().isoformat()
 
 
+def _free_sources() -> bool:
+    """Les sources gratuites (football-data.org et The Odds API) passent avant API-Football."""
+    return bool(os.environ.get("FOOTBALL_DATA_KEY") and os.environ.get("ODDS_API_KEY"))
+
+
 def _keys_present() -> bool:
-    missing = [k for k in ("API_FOOTBALL_KEY", "FIREBASE_SERVICE_ACCOUNT") if not os.environ.get(k)]
+    data_key = "FOOTBALL_DATA_KEY" if _free_sources() else "API_FOOTBALL_KEY"
+    missing = [k for k in (data_key, "FIREBASE_SERVICE_ACCOUNT") if not os.environ.get(k)]
     if missing:
         print(f"::notice::Moteur en attente : secrets manquants ({', '.join(missing)}). Rien n'a été fait.")
         return False
@@ -55,8 +63,15 @@ def main(argv: list[str] | None = None) -> int:
     p_try.add_argument("--date", default="2026-10-14")
     p_try.add_argument("--json", help="écrit les documents produits dans ce fichier")
     sub.add_parser("diagnostic", help="ce que permet la clé API-Football")
+    sub.add_parser("sources", help="format des réponses de football-data.org, Highlightly et The Odds API")
     args = parser.parse_args(argv)
     now = datetime.now(timezone.utc)
+
+    if args.command == "sources":
+        from .sources import run as run_sources
+
+        run_sources(now)
+        return 0
 
     if args.command == "diagnostic":
         if not os.environ.get("API_FOOTBALL_KEY"):
@@ -92,12 +107,23 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     from .api_football import ApiError, ApiFootball
 
-    client = ApiFootball(os.environ["API_FOOTBALL_KEY"])
     try:
-        if args.command == "resultats" and not jobs.results_due(client.free, now):
-            print("Offre gratuite : résultats lus toutes les 20 minutes, rien à faire maintenant.")
-            return 0
-        store = FirestoreStore()
+        if _free_sources():
+            from .sources_libres import SourcesLibres
+
+            store = FirestoreStore()
+            client = SourcesLibres(
+                os.environ["FOOTBALL_DATA_KEY"].strip(),
+                os.environ["ODDS_API_KEY"].strip(),
+                (os.environ.get("HIGHLIGHTLY_API_KEY") or "").strip() or None,
+                store=store,
+            )
+        else:
+            client = ApiFootball(os.environ["API_FOOTBALL_KEY"])
+            if args.command == "resultats" and not jobs.results_due(client.free, now):
+                print("Offre gratuite : résultats lus toutes les 20 minutes, rien à faire maintenant.")
+                return 0
+            store = FirestoreStore()
         if args.command == "publier":
             jobs.publish(client, store, args.date or _default_date(now), now)
         else:
@@ -107,7 +133,7 @@ def main(argv: list[str] | None = None) -> int:
         if not e.restricted:
             raise
         # Quota du jour atteint ou date hors de l'offre : on réessaiera au prochain passage.
-        print(f"::warning::API-Football a refusé la demande : {e}")
+        print(f"::warning::La source des données a refusé la demande : {e}")
     except BadServiceAccount as e:
         print(f"::error::{e}")
         return 1

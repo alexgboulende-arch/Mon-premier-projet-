@@ -2,8 +2,9 @@ name: Buteo – moteur de pronostics
 
 # Publie les pronos chaque nuit et suit les résultats pendant les matchs.
 # Les tâches programmées ne tournent que depuis la branche principale (main).
-# Sans les secrets API_FOOTBALL_KEY et FIREBASE_SERVICE_ACCOUNT, le moteur
-# s'arrête sans rien faire.
+# Données : FOOTBALL_DATA_KEY, ODDS_API_KEY et HIGHLIGHTLY_API_KEY (sources
+# gratuites), sinon API_FOOTBALL_KEY. Sans clé de données ni
+# FIREBASE_SERVICE_ACCOUNT, le moteur s'arrête sans rien faire.
 on:
   schedule:
     - cron: '5 23 * * *'        # pronos du lendemain, prêts pour 00:00 GMT (GitHub a souvent 20 min de retard)
@@ -109,7 +110,8 @@ jobs:
       - run: npm run build
 
   # Lancé seulement quand le message du commit contient « [diagnostic] » :
-  # une dizaine de requêtes pour savoir ce que permet la clé API-Football.
+  # une dizaine de requêtes pour savoir ce que permet la clé API-Football,
+  # puis le format des réponses de football-data.org, Highlightly et The Odds API.
   diagnostic:
     name: Diagnostic de la clé API-Football
     if: github.event_name == 'push' && contains(github.event.head_commit.message, '[diagnostic]')
@@ -119,6 +121,9 @@ jobs:
         working-directory: buteo/engine
     env:
       API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+      FOOTBALL_DATA_KEY: ${{ secrets.FOOTBALL_DATA_KEY }}
+      HIGHLIGHTLY_API_KEY: ${{ secrets.HIGHLIGHTLY_API_KEY }}
+      ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6
@@ -128,6 +133,8 @@ jobs:
           cache-dependency-path: buteo/engine/requirements.txt
       - run: pip install -r requirements.txt
       - run: python -m engine diagnostic
+        continue-on-error: true
+      - run: python -m engine sources
 
   moteur:
     name: Pronos et résultats
@@ -140,6 +147,9 @@ jobs:
         working-directory: buteo/engine
     env:
       API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+      FOOTBALL_DATA_KEY: ${{ secrets.FOOTBALL_DATA_KEY }}
+      ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+      HIGHLIGHTLY_API_KEY: ${{ secrets.HIGHLIGHTLY_API_KEY }}
       FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
       TACHE: ${{ github.event.schedule == '5 23 * * *' && 'publier' || inputs.tache || 'resultats' }}
       DATE_DEMANDEE: ${{ inputs.date }}

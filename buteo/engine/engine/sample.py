@@ -179,7 +179,7 @@ class SampleApi:
             books.append({"name": name, "bets": bets})
         return books
 
-    def fixtures_by_ids(self, ids: list[int]) -> list[dict]:
+    def fixtures_by_ids(self, ids: list[int], date: str | None = None) -> list[dict]:
         """Matchs joués : le score est tiré selon les vraies forces des équipes."""
         self.calls += 1
         if self.free:
